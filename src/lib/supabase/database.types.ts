@@ -65,14 +65,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "address": NonNullable<Json>,"created_at": string,"customer_name": string,"email": string,"id": string,"oversold": boolean,"paid_at": string | null,"paymongo_checkout_id": string | null,"phone": string,"shipping_centavos": number,"status": Database["public"]['Enums']["order_status"],"subtotal_centavos": number,"total_centavos": number
+                    "address": NonNullable<Json>,"amount_mismatch": boolean,"confirmation_sent_at": string | null,"created_at": string,"customer_name": string,"email": string,"id": string,"idempotency_key": string | null,"oversold": boolean,"paid_at": string | null,"payment_conflict": boolean,"paymongo_checkout_id": string | null,"paymongo_checkout_url": string | null,"phone": string,"shipping_centavos": number,"status": Database["public"]['Enums']["order_status"],"subtotal_centavos": number,"total_centavos": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "address": NonNullable<Json>,"created_at"?: string,"customer_name": string,"email": string,"id"?: string,"oversold"?: boolean,"paid_at"?: string | null,"paymongo_checkout_id"?: string | null,"phone": string,"shipping_centavos": number,"status"?: Database["public"]['Enums']["order_status"],"subtotal_centavos": number,"total_centavos": number
+                    "address": NonNullable<Json>,"amount_mismatch"?: boolean,"confirmation_sent_at"?: string | null,"created_at"?: string,"customer_name": string,"email": string,"id"?: string,"idempotency_key"?: string | null,"oversold"?: boolean,"paid_at"?: string | null,"payment_conflict"?: boolean,"paymongo_checkout_id"?: string | null,"paymongo_checkout_url"?: string | null,"phone": string,"shipping_centavos": number,"status"?: Database["public"]['Enums']["order_status"],"subtotal_centavos": number,"total_centavos": number
                   }
                   Update: {
-                    "address"?: NonNullable<Json>,"created_at"?: string,"customer_name"?: string,"email"?: string,"id"?: string,"oversold"?: boolean,"paid_at"?: string | null,"paymongo_checkout_id"?: string | null,"phone"?: string,"shipping_centavos"?: number,"status"?: Database["public"]['Enums']["order_status"],"subtotal_centavos"?: number,"total_centavos"?: number
+                    "address"?: NonNullable<Json>,"amount_mismatch"?: boolean,"confirmation_sent_at"?: string | null,"created_at"?: string,"customer_name"?: string,"email"?: string,"id"?: string,"idempotency_key"?: string | null,"oversold"?: boolean,"paid_at"?: string | null,"payment_conflict"?: boolean,"paymongo_checkout_id"?: string | null,"paymongo_checkout_url"?: string | null,"phone"?: string,"shipping_centavos"?: number,"status"?: Database["public"]['Enums']["order_status"],"subtotal_centavos"?: number,"total_centavos"?: number
                   }
                   Relationships: [
                     
@@ -117,11 +117,28 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "is_admin":
+            "accept_conflicted_payment":
+{ Args: { "p_order_id": string }; Returns: boolean
+                           },
+"apply_order_stock":
+{ Args: { "p_order_id": string }; Returns: boolean
+                           },
+"create_pending_order":
+{ Args: { "p_order": Json }; Returns: string
+                           },
+"is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "mark_order_paid":
 { Args: { "p_checkout_id": string }; Returns: string
+                           },
+"record_checkout_payment":
+{ Args: { "p_checkout_id": string,"p_currency"?: string,"p_paid_centavos"?: number }; Returns: {
+              "amount_mismatch": boolean,"order_id": string,"outcome": string,"oversold": boolean
+            }[]
+                           },
+"save_product_stock":
+{ Args: { "p_product_id": string,"p_stock": Json }; Returns: undefined
                            }
           }
           Enums: {
