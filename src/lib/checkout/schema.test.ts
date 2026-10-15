@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cartPayloadSchema, checkoutFormSchema } from './schema'
+import { cartPayloadSchema, checkoutFormSchema, idempotencyKeySchema } from './schema'
 
 const valid = { name: 'Juan Dela Cruz', phone: '0917 123 4567', email: 'juan@example.com', street: '12 Mabini St', barangay: 'Poblacion', city: 'Makati', province: 'Metro Manila', zip: '1210' }
 
@@ -22,5 +22,15 @@ describe('cartPayloadSchema', () => {
     expect(cartPayloadSchema.safeParse([]).success).toBe(false)
     expect(cartPayloadSchema.safeParse([{ variantId: '00000000-0000-4000-8000-000000000001', qty: 0, priceCentavos: 100 }]).success).toBe(false)
     expect(cartPayloadSchema.safeParse([{ variantId: 'x', qty: 1, priceCentavos: 100 }]).success).toBe(false)
+  })
+})
+
+describe('idempotencyKeySchema', () => {
+  it('accepts a UUID, treats a missing key as null, and rejects anything else', () => {
+    expect(idempotencyKeySchema.parse('8a1b7f1e-4d5c-4e2a-9b3c-0d1e2f3a4b5c')).toBe('8a1b7f1e-4d5c-4e2a-9b3c-0d1e2f3a4b5c')
+    expect(idempotencyKeySchema.parse(null)).toBeNull()
+    expect(idempotencyKeySchema.parse('')).toBeNull()
+    expect(idempotencyKeySchema.safeParse('not-a-uuid').success).toBe(false)
+    expect(idempotencyKeySchema.safeParse('x'.repeat(500)).success).toBe(false)
   })
 })
