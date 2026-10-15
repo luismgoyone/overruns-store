@@ -45,11 +45,11 @@ export function CartView({ cancelled }: { cancelled: boolean }) {
                   <p className="text-sm text-muted">Size {sizeLabel(l.size)} · {formatPeso(l.priceCentavos)} each</p>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <button type="button" aria-label="Decrease quantity" className={stepBtn} onClick={() => dispatch({ type: 'setQty', variantId: l.variantId, qty: l.qty - 1 })}>−</button>
-                      <span className="w-10 text-center" aria-live="polite">{l.qty}</span>
-                      <button type="button" aria-label="Increase quantity" className={stepBtn} disabled={l.qty >= Math.min(l.maxQty, MAX_QTY_PER_LINE)} onClick={() => dispatch({ type: 'setQty', variantId: l.variantId, qty: l.qty + 1 })}>+</button>
+                      <button type="button" aria-label={`Decrease quantity of ${l.name}, size ${sizeLabel(l.size)}`} className={stepBtn} onClick={() => dispatch({ type: 'setQty', variantId: l.variantId, qty: l.qty - 1 })}>−</button>
+                      <span className="w-10 text-center" aria-live="polite" aria-label={`Quantity ${l.qty}`}>{l.qty}</span>
+                      <button type="button" aria-label={`Increase quantity of ${l.name}, size ${sizeLabel(l.size)}`} className={stepBtn} disabled={l.qty >= Math.min(l.maxQty, MAX_QTY_PER_LINE)} onClick={() => dispatch({ type: 'setQty', variantId: l.variantId, qty: l.qty + 1 })}>+</button>
                     </div>
-                    <button type="button" className="h-11 px-2 text-sm underline" onClick={() => dispatch({ type: 'remove', variantId: l.variantId })}>Remove</button>
+                    <button type="button" className="h-11 px-2 text-sm underline" aria-label={`Remove ${l.name}, size ${sizeLabel(l.size)}`} onClick={() => dispatch({ type: 'remove', variantId: l.variantId })}>Remove</button>
                   </div>
                 </div>
               </li>

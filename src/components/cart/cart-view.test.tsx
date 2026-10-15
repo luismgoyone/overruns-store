@@ -20,9 +20,9 @@ describe('CartView', () => {
     expect(screen.getByTestId('subtotal')).toHaveTextContent('₱450')
     expect(screen.getByTestId('shipping')).toHaveTextContent('₱150')
     expect(screen.getByTestId('total')).toHaveTextContent('₱600')
-    await userEvent.click(screen.getByRole('button', { name: 'Increase quantity' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Increase quantity of Heavyweight Tee, size M' }))
     expect(screen.getByTestId('total')).toHaveTextContent('₱1,050')
-    expect(screen.getByRole('button', { name: 'Increase quantity' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Increase quantity of Heavyweight Tee, size M' })).toBeDisabled()
     expect(screen.getByRole('link', { name: 'Checkout' })).toHaveAttribute('href', '/checkout')
   })
   it('keeps the cart and explains when payment was cancelled', async () => {
