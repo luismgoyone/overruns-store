@@ -1,0 +1,7 @@
+export const adminTitle = 'font-display text-3xl lg:text-4xl'
+export const adminHeader = 'flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-5'
+export const table = 'w-full border border-hairline bg-card text-sm'
+export const th = 'border-b border-hairline bg-paper px-3 py-3 text-left font-mono text-[11px] font-bold uppercase tracking-[0.15em]'
+export const td = 'px-3 py-3 align-middle'
+export const panel = 'border border-hairline bg-card p-5 sm:p-6'
+export const panelTitle = 'border-b border-hairline pb-3 font-display text-lg'

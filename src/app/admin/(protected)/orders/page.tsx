@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { adminHeader, adminTitle, table, td, th } from '@/components/admin/admin-ui'
 import { StatusBadge } from '@/components/admin/status-badge'
+import { monoLabel } from '@/components/ui/styles'
 import { ORDER_STATUSES } from '@/lib/admin/order-status'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { formatPeso } from '@/lib/money'
@@ -16,24 +18,35 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-2xl">Orders</h1>
-      <nav className="flex flex-wrap gap-2 text-sm">
+      <div className={adminHeader}>
+        <div className="space-y-1">
+          <p className={`${monoLabel} text-muted`}>{orders.length} {filter ?? ''} {orders.length === 1 ? 'order' : 'orders'}</p>
+          <h1 className={adminTitle}>Orders</h1>
+        </div>
+      </div>
+      <nav aria-label="Filter by status" className="flex flex-wrap gap-2">
         {[null, ...ORDER_STATUSES].map((s) => (
-          <Link key={s ?? 'all'} href={s ? `/admin/orders?status=${s}` : '/admin/orders'} className={`flex h-11 items-center border border-ink px-3 uppercase ${filter === s ? 'bg-ink text-paper' : 'bg-card'}`} aria-current={filter === s ? 'page' : undefined}>{s ?? 'All'}</Link>
+          <Link key={s ?? 'all'} href={s ? `/admin/orders?status=${s}` : '/admin/orders'} className={`flex h-11 items-center border px-4 font-mono text-xs uppercase tracking-[0.15em] transition-colors ${filter === s ? 'border-ink bg-ink text-paper' : 'border-hairline bg-card hover:border-ink'}`} aria-current={filter === s ? 'page' : undefined}>{s ?? 'All'}</Link>
         ))}
       </nav>
-      {orders.length === 0 ? <p className="text-muted">{filter ? `No ${filter} orders.` : 'No orders yet.'}</p> : (
+      {orders.length === 0 ? <p className="border border-hairline bg-card p-6 text-muted">{filter ? `No ${filter} orders.` : 'No orders yet.'}</p> : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] border border-ink bg-card text-sm">
-            <thead className="border-b border-ink text-left"><tr><th className="p-2">Order #</th><th className="p-2">Customer</th><th className="p-2">Total</th><th className="p-2">Status</th><th className="p-2">Date</th></tr></thead>
-            <tbody>
+          <table className={`${table} min-w-[680px]`}>
+            <thead><tr><th className={th}>Order #</th><th className={th}>Customer</th><th className={th}>Total</th><th className={th}>Status</th><th className={th}>Date</th><th className={th}><span className="sr-only">Actions</span></th></tr></thead>
+            <tbody className="divide-y divide-hairline">
               {orders.map((o) => (
-                <tr key={o.id} className="border-b border-ink/20">
-                  <td className="p-2"><Link href={`/admin/orders/${o.id}`} className="inline-flex h-11 items-center font-mono font-semibold underline">{formatOrderNumber(o.id)}</Link></td>
-                  <td className="p-2">{o.customer_name}</td>
-                  <td className="p-2">{formatPeso(o.total_centavos)}</td>
-                  <td className="p-2"><StatusBadge status={o.status} />{o.oversold ? <span className="ml-2 border border-tag px-1 text-xs font-bold uppercase">Oversold</span> : null}</td>
-                  <td className="p-2 text-muted">{formatManilaDate(o.created_at)}</td>
+                <tr key={o.id} className={o.oversold ? 'bg-tag/5' : 'hover:bg-paper/60'}>
+                  <td className={td}><Link href={`/admin/orders/${o.id}`} className="inline-flex h-11 items-center font-mono font-bold underline-offset-4 hover:underline">{formatOrderNumber(o.id)}</Link></td>
+                  <td className={td}>{o.customer_name}</td>
+                  <td className={`${td} font-mono font-bold whitespace-nowrap`}>{formatPeso(o.total_centavos)}</td>
+                  <td className={td}>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <StatusBadge status={o.status} />
+                      {o.oversold ? <span className="border border-tag bg-card px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-tag-ink">Oversold</span> : null}
+                    </span>
+                  </td>
+                  <td className={`${td} font-mono text-xs uppercase text-muted whitespace-nowrap`}>{formatManilaDate(o.created_at)}</td>
+                  <td className={`${td} text-right`}><Link href={`/admin/orders/${o.id}`} aria-label={`View order ${formatOrderNumber(o.id)}`} className="inline-flex h-11 items-center font-mono text-xs font-bold uppercase tracking-[0.15em] underline underline-offset-4">View</Link></td>
                 </tr>
               ))}
             </tbody>
