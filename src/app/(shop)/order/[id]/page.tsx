@@ -21,7 +21,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="max-w-xl space-y-6 px-4 py-8">
-      <ClearCartOnMount />
+      {/* PayMongo only redirects here after payment; a cancelled order shouldn't wipe the cart. */}
+      {order.status !== 'cancelled' ? <ClearCartOnMount /> : null}
       {paidOrLater ? (
         <div className="space-y-2">
           <div aria-hidden className="flex h-14 w-14 items-center justify-center border border-ink bg-tag text-3xl">✓</div>

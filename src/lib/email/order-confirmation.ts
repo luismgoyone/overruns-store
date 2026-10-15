@@ -26,8 +26,8 @@ ${order.items.map((i) => `<tr><td>${escapeHtml(itemLine(i))}</td><td align="righ
 <tr><td style="color:#6B6B6B">Shipping</td><td align="right" style="color:#6B6B6B">${formatPeso(order.shippingCentavos)}</td></tr>
 <tr><td><strong>Total</strong></td><td align="right"><strong>${formatPeso(order.totalCentavos)}</strong></td></tr>
 </table>
-<p style="margin:16px 0 4px;font-weight:bold">Delivering to</p>
-<p style="margin:0 0 16px;color:#6B6B6B">${escapeHtml(addressText)}</p>
+${addressText ? `<p style="margin:16px 0 4px;font-weight:bold">Delivering to</p>
+<p style="margin:0 0 16px;color:#6B6B6B">${escapeHtml(addressText)}</p>` : ''}
 <p style="margin:0"><a href="${url}" style="display:inline-block;background:#E85D2A;color:#111111;border:1px solid #111111;padding:12px 20px;font-weight:bold;text-decoration:none;text-transform:uppercase">View your order</a></p>
 </td></tr></table></td></tr></table></body></html>`
 
@@ -38,7 +38,7 @@ ${order.items.map((i) => `<tr><td>${escapeHtml(itemLine(i))}</td><td align="righ
     `Shipping: ${formatPeso(order.shippingCentavos)}`,
     `Total: ${formatPeso(order.totalCentavos)}`,
     '',
-    `Delivering to: ${addressText}`,
+    ...(addressText ? [`Delivering to: ${addressText}`] : []),
     `View your order: ${url}`,
   ].join('\n')
 
