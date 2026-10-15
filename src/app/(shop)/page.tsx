@@ -38,7 +38,7 @@ export default async function HomePage() {
             </div>
           </div>
           <div className="relative aspect-[4/3] bg-paper sm:aspect-auto sm:min-h-[420px]">
-            <Image src="https://picsum.photos/seed/overruns-warehouse/1600/1000" alt="Folded clothing on a warehouse shelf" fill priority sizes="(min-width: 640px) 50vw, 100vw" className="object-cover grayscale-[30%]" />
+            <Image src="/demo/hero.jpg" alt="Folded clothing on a warehouse shelf" fill priority sizes="(min-width: 640px) 50vw, 100vw" className="object-cover grayscale-[30%]" />
           </div>
         </div>
       </section>

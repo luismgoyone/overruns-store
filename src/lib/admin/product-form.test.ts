@@ -85,6 +85,7 @@ describe('parseProductForm images', () => {
   it.each([
     IMG,
     'products/0f8fad5b-d9cb-469f-a165-70867728950e.webp',
+    '/demo/products/heavyweight-tee-black-1.jpg',
     'https://picsum.photos/seed/x/800/800',
     'https://fastly.picsum.photos/id/1/800/800.jpg',
     `https://${supabaseHost}/storage/v1/object/public/product-images/x.jpg`,
@@ -98,6 +99,8 @@ describe('parseProductForm images', () => {
     'http://picsum.photos/seed/x/800/800',
     'https://evil.example.com/x.jpg',
     'https://picsum.photos.evil.com/x.jpg',
+    '/demo/products/../../secret.jpg',
+    '/demo/products/x.png',
     'javascript:alert(1)',
   ])('rejects %s', (img) => {
     const r = parseProductForm(fd({ ...base, images: JSON.stringify([img]) }))

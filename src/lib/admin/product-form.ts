@@ -5,10 +5,12 @@ export const MAX_PRICE_CENTAVOS = 100_000_000
 export const MAX_DESCRIPTION_LENGTH = 2000
 
 const STORAGE_PATH = /^products\/[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$/
+// Demo photos shipped in public/ for the seeded products.
+const DEMO_PATH = /^\/demo\/products\/[a-z0-9-]+\.jpg$/
 const REMOTE_IMAGE_HOSTS = ['picsum.photos', 'fastly.picsum.photos']
 
 export function isAllowedImage(src: string): boolean {
-  if (STORAGE_PATH.test(src)) return true
+  if (STORAGE_PATH.test(src) || DEMO_PATH.test(src)) return true
   if (!src.startsWith('https://')) return false
   let host: string
   try {
