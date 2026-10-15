@@ -34,13 +34,16 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
       if (action.line.maxQty <= 0) return state
       const existing = state.lines.find((l) => l.variantId === action.line.variantId)
       const wanted = (existing?.qty ?? 0) + (action.qty ?? 1)
-      const next: CartLine = { ...action.line, qty: clampQty(wanted, action.line.maxQty) }
+      const qty = clampQty(wanted, action.line.maxQty)
+      if (!Number.isFinite(qty) || qty <= 0) return state
+      const next: CartLine = { ...action.line, qty }
       const lines = existing
         ? state.lines.map((l) => (l.variantId === next.variantId ? next : l))
         : [...state.lines, next]
       return { ...state, lines }
     }
     case 'setQty': {
+      if (!Number.isFinite(action.qty)) return state
       const lines = state.lines
         .map((l) => (l.variantId === action.variantId ? { ...l, qty: clampQty(action.qty, l.maxQty) } : l))
         .filter((l) => l.qty > 0)

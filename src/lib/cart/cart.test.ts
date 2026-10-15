@@ -32,6 +32,12 @@ describe('cartReducer', () => {
     s = cartReducer(s, { type: 'setQty', variantId: 'v-m', qty: 0 })
     expect(s.lines).toEqual([])
   })
+  it('ignores non-finite or non-positive quantities', () => {
+    expect(cartReducer(ready, { type: 'add', line: line(), qty: 0 })).toBe(ready)
+    expect(cartReducer(ready, { type: 'add', line: line(), qty: Number.NaN })).toBe(ready)
+    const s = cartReducer(ready, { type: 'add', line: line() })
+    expect(cartReducer(s, { type: 'setQty', variantId: 'v-m', qty: Number.NaN })).toBe(s)
+  })
   it('removes and clears but stays hydrated', () => {
     let s = cartReducer(ready, { type: 'add', line: line() })
     s = cartReducer(s, { type: 'add', line: line({ variantId: 'v-l', size: 'L' }) })
