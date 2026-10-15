@@ -28,3 +28,10 @@ body {
   text-transform: uppercase;
   letter-spacing: -0.01em;
 }
+
+/* Keep the footer clear of the pinned mobile add-to-cart bar. */
+@media (max-width: 639px) {
+  body:has([data-sticky-cta]) {
+    padding-bottom: 8rem;
+  }
+}
