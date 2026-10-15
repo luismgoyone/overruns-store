@@ -18,8 +18,11 @@ export async function proxy(request: NextRequest) {
   if (!user && isProtectedAdminPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/admin/login'
-    url.search = `?next=${encodeURIComponent(request.nextUrl.pathname)}`
-    return NextResponse.redirect(url)
+    url.search = `?next=${encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)}`
+    const redirect = NextResponse.redirect(url)
+    // Keep any cookie updates Supabase made (e.g. clearing a stale session).
+    response.cookies.getAll().forEach((c) => redirect.cookies.set(c))
+    return redirect
   }
   return response
 }
