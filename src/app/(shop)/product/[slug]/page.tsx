@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { cache } from 'react'
 import { AddToCart } from '@/components/catalog/add-to-cart'
+import { BackButton } from '@/components/catalog/back-button'
+import { Breadcrumb } from '@/components/catalog/breadcrumb'
 import { OverrunBadge } from '@/components/catalog/overrun-badge'
 import { percentOff, PriceTag } from '@/components/catalog/price-tag'
 import { ProductGallery } from '@/components/catalog/product-gallery'
@@ -35,31 +37,39 @@ export default async function ProductPage({ params }: Props) {
   if (!product) notFound()
   const off = percentOff(product.priceCentavos, product.retailPriceCentavos)
   const category = CATEGORIES.find((c) => c.slug === product.category)?.label ?? product.category
+  const categoryHref = `/shop?category=${encodeURIComponent(product.category)}`
   return (
-    <div className="grid gap-6 pb-8 sm:grid-cols-2 sm:gap-10 sm:px-8 sm:pb-12 sm:pt-8 lg:gap-16">
-      <div className="relative sm:sticky sm:top-24 sm:self-start">
-        <ProductGallery images={product.images} name={product.name} />
-        <OverrunBadge className="absolute left-3 top-3" />
+    <div className="pb-8 sm:px-8 sm:pb-12">
+      <div className="flex items-center gap-4 border-b border-hairline px-4 py-3 sm:border-0 sm:px-0 sm:pb-6 sm:pt-6">
+        <BackButton fallbackHref={categoryHref} />
+        <span aria-hidden="true" className="h-4 w-px bg-hairline" />
+        <Breadcrumb items={[{ label: 'Shop', href: '/shop' }, { label: category, href: categoryHref }, { label: product.name }]} />
       </div>
-      <div className="space-y-6 px-4 sm:px-0">
-        <div className="space-y-3">
-          <div className={`flex justify-between gap-4 ${monoLabel} text-muted`}>
-            <span>{category}</span>
-            <span className="font-bold text-tag-ink">Limited stock</span>
-          </div>
-          <h1 className="font-display text-3xl leading-tight lg:text-4xl">{product.name}</h1>
-          <div className="flex flex-wrap items-center gap-3">
-            <PriceTag price={product.priceCentavos} retail={product.retailPriceCentavos} size="lg" />
-            {off ? <span className="border border-tag bg-tag/10 px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.1em] text-tag-ink">{off}% off retail</span> : null}
-          </div>
+      <div className="grid gap-6 sm:grid-cols-2 sm:gap-10 lg:gap-16">
+        <div className="relative sm:sticky sm:top-24 sm:self-start">
+          <ProductGallery images={product.images} name={product.name} />
+          <OverrunBadge className="absolute left-3 top-3" />
         </div>
-        <div className="border-t border-hairline pt-6">
-          <AddToCart product={product} />
-        </div>
-        <div className="divide-y divide-hairline border-y border-hairline">
-          <details open className="group"><summary className={summary}>Details</summary><p className="whitespace-pre-line pb-5 text-muted">{product.description}</p></details>
-          <details className="group"><summary className={summary}>Sizing</summary><p className="pb-5 text-muted">Overruns follow the brand&apos;s own sizing. Message us on Instagram for measurements.</p></details>
-          <details className="group"><summary className={summary}>Shipping</summary><p className="pb-5 text-muted">Flat {formatPeso(SHIPPING_FEE_CENTAVOS)} nationwide. Ships within 2 business days of payment.</p></details>
+        <div className="space-y-6 px-4 sm:px-0">
+          <div className="space-y-3">
+            <div className={`flex justify-between gap-4 ${monoLabel} text-muted`}>
+              <span>{category}</span>
+              <span className="font-bold text-tag-ink">Limited stock</span>
+            </div>
+            <h1 className="font-display text-3xl leading-tight lg:text-4xl">{product.name}</h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <PriceTag price={product.priceCentavos} retail={product.retailPriceCentavos} size="lg" />
+              {off ? <span className="border border-tag bg-tag/10 px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.1em] text-tag-ink">{off}% off retail</span> : null}
+            </div>
+          </div>
+          <div className="border-t border-hairline pt-6">
+            <AddToCart product={product} />
+          </div>
+          <div className="divide-y divide-hairline border-y border-hairline">
+            <details open className="group"><summary className={summary}>Details</summary><p className="whitespace-pre-line pb-5 text-muted">{product.description}</p></details>
+            <details className="group"><summary className={summary}>Sizing</summary><p className="pb-5 text-muted">Overruns follow the brand&apos;s own sizing. Message us on Instagram for measurements.</p></details>
+            <details className="group"><summary className={summary}>Shipping</summary><p className="pb-5 text-muted">Flat {formatPeso(SHIPPING_FEE_CENTAVOS)} nationwide. Ships within 2 business days of payment.</p></details>
+          </div>
         </div>
       </div>
     </div>
