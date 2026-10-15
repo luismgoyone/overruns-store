@@ -104,7 +104,11 @@ New environment variables:
 - `OWNER_NOTIFY_EMAIL` (optional): where alerts for oversold, amount-mismatch and paid-after-cancel orders go. Unset = no owner emails.
 - `CRON_SECRET`: any long random string (`openssl rand -hex 32`). Vercel sends it to the cron route; without it the cron refuses to run.
 
-**Upgrading an existing deployment:** these failsafes add the migration `supabase/migrations/20261016000000_failsafes.sql`. Push it before (or right after) deploying this code: `npx supabase db push`. Old code keeps working against the new schema.
+**Upgrading an existing deployment:** these failsafes add the migration `supabase/migrations/20261016000000_failsafes.sql`. Run `npx supabase db push` **before** deploying this code. The new code calls functions and columns that only exist after the migration (`create_pending_order`, `record_checkout_payment`, `idempotency_key`, …), so deploying first would break checkout and the webhook until the push. The old code keeps working against the new schema, so pushing first is safe.
+
+**PayMongo "pass fees to customer":** leave it off. With it on, PayMongo adds its fee to what the customer pays, so `payments[].amount` is larger than the order total and every order gets flagged **Amount mismatch** (orders are still marked paid).
+
+**Switching from test to live keys:** each order remembers which key mode created its PayMongo session. After a switch, pending orders from the other mode can't be checked or paid with the new key, so reconciliation skips them and cancelling them skips PayMongo.
 
 ## Deploy (Vercel Hobby + Supabase Free)
 
