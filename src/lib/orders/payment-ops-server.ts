@@ -38,8 +38,18 @@ export async function recordPayment(checkoutId: string, info: PaymentInfo): Prom
  * Server dependencies for reconciliation and safe cancels. `onStockChange` runs after an order turns paid
  * (route handlers and server actions pass revalidatePath; render paths can't revalidate and rely on ISR).
  */
-export function buildPaymentOps({ onStockChange }: { onStockChange?: () => void } = {}): PaymentOpsDeps {
+type OpsOptions = {
+  onStockChange?: () => void
+  /** Run emails later (e.g. next/server `after` on a page render) instead of awaiting them. */
+  defer?: (fn: () => Promise<void>) => void
+}
+
+export function buildPaymentOps({ onStockChange, defer }: OpsOptions = {}): PaymentOpsDeps {
   const db = createAdminClient()
+  const later = <A extends unknown[]>(label: string, fn: (...args: A) => Promise<void>) =>
+    defer
+      ? async (...args: A) => defer(() => fn(...args).catch((err) => console.error(`[payments] deferred ${label} failed`, { args, err })))
+      : fn
   return {
     async getOrder(orderId) {
       const { data, error } = await db.from('orders').select('id, status, paymongo_checkout_id, created_at').eq('id', orderId).maybeSingle()
@@ -58,13 +68,13 @@ export function buildPaymentOps({ onStockChange }: { onStockChange?: () => void 
       if (error) throw error
       return data.length > 0
     },
-    sendConfirmation: sendConfirmationIfUnsent,
-    notifyOwner,
+    sendConfirmation: later('confirmation email', sendConfirmationIfUnsent),
+    notifyOwner: later('owner alert', notifyOwner),
   }
 }
 
 /** Reconcile one pending order with PayMongo. Skipped (never throws) when PayMongo isn't configured. */
-export async function reconcileOrder(orderId: string, opts: { onStockChange?: () => void } = {}): Promise<ReconcileResult | 'skipped'> {
+export async function reconcileOrder(orderId: string, opts: OpsOptions = {}): Promise<ReconcileResult | 'skipped'> {
   if (!paymongoSecretKey()) return 'skipped'
   try {
     return await reconcileOrderCore(orderId, buildPaymentOps(opts))
@@ -74,6 +84,6 @@ export async function reconcileOrder(orderId: string, opts: { onStockChange?: ()
   }
 }
 
-export async function cancelPendingOrder(orderId: string, opts: { onStockChange?: () => void } = {}): Promise<CancelResult> {
+export async function cancelPendingOrder(orderId: string, opts: OpsOptions = {}): Promise<CancelResult> {
   return cancelPendingOrderCore(orderId, buildPaymentOps(opts))
 }
