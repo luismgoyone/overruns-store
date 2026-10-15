@@ -33,8 +33,8 @@ export default async function HomePage() {
             <h1 className="font-display text-[2.75rem] leading-[0.95] lg:text-6xl">Real brands.<br />Overrun prices.</h1>
             <p className="max-w-md text-muted">Authentic factory-surplus clothing in the Philippines. Brand-new pieces from the extra production run, below retail.</p>
             <div>
-              <Link href="/shop" className={`${buttonPrimary} w-full sm:hidden`}>Shop the drop →</Link>
-              <Link href="/shop" className={`${buttonInk} hidden sm:inline-flex`}>Shop the drop</Link>
+              <span className="sm:hidden"><Link href="/shop" className={`${buttonPrimary} w-full`}>Shop the drop →</Link></span>
+              <span className="hidden sm:inline"><Link href="/shop" className={buttonInk}>Shop the drop</Link></span>
             </div>
           </div>
           <div className="relative aspect-[4/3] bg-paper sm:aspect-auto sm:min-h-[420px]">

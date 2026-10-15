@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useActionState, useState } from 'react'
 import { startCheckout, type CheckoutActionState } from '@/app/(shop)/checkout/actions'
 import { useCart } from '@/components/cart/cart-provider'
-import { buttonPrimary, buttonSecondary, inputBase, monoLabel } from '@/components/ui/styles'
+import { buttonPrimary, buttonSecondary, inputOnCanvas, monoLabel } from '@/components/ui/styles'
 import { computeTotals } from '@/lib/cart/totals'
 import { sizeLabel } from '@/lib/catalog/constants'
 import { problemMessage } from '@/lib/checkout/problems'
@@ -48,7 +48,7 @@ export function CheckoutForm() {
           defaultValue={state.values?.[f.name] ?? ''}
           aria-invalid={err ? true : undefined}
           aria-describedby={err ? `${f.name}-error` : undefined}
-          className={inputBase}
+          className={inputOnCanvas}
         />
         {err ? <p id={`${f.name}-error`} className="border-l-4 border-tag pl-2 text-sm font-semibold">{err}</p> : null}
       </div>

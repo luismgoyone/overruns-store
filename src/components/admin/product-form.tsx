@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Fragment, useActionState, useState } from 'react'
 import { saveProduct, type ProductFormState } from '@/app/admin/(protected)/products/actions'
-import { buttonInk, inputBase, monoLabel } from '@/components/ui/styles'
+import { buttonInk, inputBase, inputCompact, monoLabel, textareaBase } from '@/components/ui/styles'
 import { centavosToPesoInput, MAX_DESCRIPTION_LENGTH } from '@/lib/admin/product-form'
 import { CATEGORIES, SIZES, sizeLabel } from '@/lib/catalog/constants'
 import type { Product } from '@/lib/catalog/types'
@@ -56,7 +56,7 @@ export function ProductForm({ product }: { product: Product | null }) {
             <label className="block space-y-1.5"><span className={label}>Overrun price (₱)</span><input name="price" inputMode="decimal" defaultValue={text('price', centavosToPesoInput(product?.priceCentavos ?? null))} className={inputBase} /><Err e={e} k="price" /></label>
             <label className="block space-y-1.5"><span className={label}>Retail price (₱, optional)</span><input name="retailPrice" inputMode="decimal" defaultValue={text('retailPrice', centavosToPesoInput(product?.retailPriceCentavos ?? null))} className={inputBase} /><Err e={e} k="retailPrice" /></label>
           </div>
-          <label className="block space-y-1.5"><span className={label}>Description</span><textarea name="description" maxLength={MAX_DESCRIPTION_LENGTH} defaultValue={text('description', product?.description)} rows={5} className={`${inputBase} h-auto py-2`} /><Err e={e} k="description" /></label>
+          <label className="block space-y-1.5"><span className={label}>Description</span><textarea name="description" maxLength={MAX_DESCRIPTION_LENGTH} defaultValue={text('description', product?.description)} rows={5} className={textareaBase} /><Err e={e} k="description" /></label>
         </Fragment>
         <div key={`flags-${round}`} className="flex flex-wrap gap-x-8 gap-y-1">
           <label className={`flex h-11 items-center gap-3 ${monoLabel}`}><input type="checkbox" name="isActive" defaultChecked={checked('isActive', product?.isActive ?? true)} className="h-5 w-5 accent-ink" /> Visible in store</label>
@@ -78,7 +78,7 @@ export function ProductForm({ product }: { product: Product | null }) {
           {SIZES.map((s) => (
             <label key={s} className="block space-y-2 border border-hairline bg-paper p-2 text-center font-mono text-[11px] font-bold uppercase tracking-[0.1em]">
               {sizeLabel(s)}
-              <input name={`stock_${s}`} inputMode="numeric" defaultValue={text(`stock_${s}`, stockFor(s)?.toString())} className={`${inputBase} h-11 bg-card px-1 text-center font-mono`} />
+              <input name={`stock_${s}`} inputMode="numeric" defaultValue={text(`stock_${s}`, stockFor(s)?.toString())} className={inputCompact} />
               <Err e={e} k={`stock_${s}`} />
             </label>
           ))}

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { CATEGORIES, SIZES, sizeLabel } from '@/lib/catalog/constants'
 import type { ShopFilters as Filters } from '@/lib/catalog/params'
 
-const select = 'h-11 w-full appearance-none border border-hairline bg-card bg-[length:10px] bg-[right_0.6rem_center] bg-no-repeat pl-2 pr-6 font-mono text-[11px] uppercase tracking-[0.1em] hover:border-ink sm:text-xs'
+const select = 'h-11 w-full appearance-none border border-hairline bg-card bg-[length:10px] bg-[right_0.6rem_center] bg-no-repeat pl-2 pr-6 font-mono text-[11px] uppercase tracking-normal hover:border-ink sm:text-xs sm:tracking-[0.1em]'
 // Small chevron so the native selects still read as dropdowns after `appearance-none`.
 const chevron = { backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23111' stroke-width='1.5'/%3E%3C/svg%3E\")" }
 const heading = 'border-b border-hairline pb-3 font-mono text-xs uppercase tracking-[0.15em]'

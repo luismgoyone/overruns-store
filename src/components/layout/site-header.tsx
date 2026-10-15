@@ -16,7 +16,7 @@ export function SiteHeader() {
           <Link href="/" className="flex h-11 items-center font-display text-base tracking-tight sm:text-lg">The Overruns Project</Link>
           <nav aria-label="Main" className="flex items-center sm:justify-center">
             <Link href="/shop" className={navLink}>Shop</Link>
-            <Link href="/about" className={`${navLink} hidden sm:flex`}>About</Link>
+            <span className="hidden sm:inline"><Link href="/about" className={navLink}>About</Link></span>
             <span className="sm:hidden"><CartLink /></span>
           </nav>
           <div className="hidden justify-end sm:flex"><CartLink /></div>

@@ -58,7 +58,7 @@ export function ImageUploader({ initial }: { initial: string[] }) {
           </li>
         ))}
         {images.length < MAX_IMAGES ? (
-          <li className="col-span-2 sm:col-span-1">
+          <li>
             <label className={`flex aspect-square h-full min-h-32 cursor-pointer flex-col items-center justify-center gap-2 border-2 border-dashed border-hairline bg-paper p-3 text-center transition-colors hover:border-ink focus-within:border-ink focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink ${busy ? 'cursor-wait opacity-60' : ''}`}>
               <svg aria-hidden viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="square"><path d="M12 16V4M7 9l5-5 5 5M4 20h16" /></svg>
               <span className="font-mono text-xs font-bold uppercase tracking-[0.15em]">{busy ? 'Uploading…' : 'Add photos'}</span>
