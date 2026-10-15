@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { cache } from 'react'
 import { AddToCart } from '@/components/catalog/add-to-cart'
 import { OverrunBadge } from '@/components/catalog/overrun-badge'
 import { PriceTag } from '@/components/catalog/price-tag'
@@ -12,16 +13,24 @@ import { createPublicClient } from '@/lib/supabase/public'
 export const revalidate = 60
 type Props = { params: Promise<{ slug: string }> }
 
+// Pages render on first visit and are then cached (ISR) instead of hitting Supabase every view.
+export async function generateStaticParams() {
+  return []
+}
+
+// Dedupes the lookup shared by generateMetadata and the page.
+const loadProduct = cache((slug: string) => getProductBySlug(createPublicClient(), slug))
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const product = await getProductBySlug(createPublicClient(), (await params).slug)
+  const product = await loadProduct((await params).slug)
   return { title: product?.name ?? 'Product not found' }
 }
 
 export default async function ProductPage({ params }: Props) {
-  const product = await getProductBySlug(createPublicClient(), (await params).slug)
+  const product = await loadProduct((await params).slug)
   if (!product) notFound()
   return (
-    <div className="grid gap-6 px-4 pb-32 pt-4 sm:grid-cols-2 sm:pb-12">
+    <div className="grid gap-6 px-4 pb-8 pt-4 sm:grid-cols-2 sm:pb-12">
       <ProductGallery images={product.images} name={product.name} />
       <div className="space-y-5">
         <OverrunBadge label="Limited stock" />

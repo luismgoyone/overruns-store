@@ -33,7 +33,7 @@ export function AddToCart({ product }: { product: Product }) {
     <div className="space-y-4">
       <SizePicker variants={product.variants} selected={variantId} onSelect={(id) => { setVariantId(id); setAdded(false) }} />
       {note ? <p className="text-sm font-semibold">{note}</p> : null}
-      <div className="fixed inset-x-0 bottom-0 z-20 space-y-2 border-t border-ink bg-paper p-4 sm:static sm:border-0 sm:p-0">
+      <div data-sticky-cta className="fixed inset-x-0 bottom-0 z-20 space-y-2 border-t border-ink bg-paper p-4 sm:static sm:border-0 sm:p-0">
         {inStock.length === 0 ? (
           <button type="button" disabled className={`${buttonPrimary} w-full`}>Sold out</button>
         ) : (
