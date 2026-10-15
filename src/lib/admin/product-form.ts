@@ -1,6 +1,25 @@
 import { CATEGORIES, SIZES, type Category, type Size } from '@/lib/catalog/constants'
 
 export const MAX_IMAGES = 8
+export const MAX_PRICE_CENTAVOS = 100_000_000
+export const MAX_DESCRIPTION_LENGTH = 2000
+
+const STORAGE_PATH = /^products\/[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$/
+const REMOTE_IMAGE_HOSTS = ['picsum.photos', 'fastly.picsum.photos']
+
+export function isAllowedImage(src: string): boolean {
+  if (STORAGE_PATH.test(src)) return true
+  if (!src.startsWith('https://')) return false
+  let host: string
+  try {
+    host = new URL(src).host
+  } catch {
+    return false
+  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseHost = supabaseUrl ? new URL(supabaseUrl).host : null
+  return REMOTE_IMAGE_HOSTS.includes(host) || host === supabaseHost
+}
 
 export function parsePesoToCentavos(input: string): number | null {
   const s = input.replace(/[₱,\s]/g, '')
@@ -53,16 +72,21 @@ export function parseProductForm(fd: FormData): { ok: true; data: ProductInput }
 
   const priceCentavos = parsePesoToCentavos(str('price'))
   if (!priceCentavos) errors.price = 'Enter a price in pesos, like 690 or 1,299.50.'
+  else if (priceCentavos > MAX_PRICE_CENTAVOS) errors.price = 'Price can be at most ₱1,000,000.'
 
   const retailRaw = str('retailPrice')
   const retailPriceCentavos = retailRaw ? parsePesoToCentavos(retailRaw) : null
   if (retailRaw && retailPriceCentavos === null) errors.retailPrice = 'Enter a retail price in pesos, or leave it blank.'
+  else if (retailPriceCentavos !== null && retailPriceCentavos > MAX_PRICE_CENTAVOS) errors.retailPrice = 'Retail price can be at most ₱1,000,000.'
   else if (retailPriceCentavos !== null && priceCentavos && retailPriceCentavos <= priceCentavos) errors.retailPrice = 'Retail price must be higher than the overrun price.'
+
+  const description = str('description')
+  if (description.length > MAX_DESCRIPTION_LENGTH) errors.description = `Description can be at most ${MAX_DESCRIPTION_LENGTH} characters.`
 
   let images: string[] = []
   try {
     const parsed: unknown = JSON.parse(str('images') || '[]')
-    if (Array.isArray(parsed) && parsed.every((p) => typeof p === 'string')) images = parsed.slice(0, MAX_IMAGES)
+    if (Array.isArray(parsed) && parsed.every((p) => typeof p === 'string' && isAllowedImage(p))) images = parsed.slice(0, MAX_IMAGES)
     else errors.images = 'Image list is invalid. Reload and try again.'
   } catch {
     errors.images = 'Image list is invalid. Reload and try again.'
@@ -81,7 +105,7 @@ export function parseProductForm(fd: FormData): { ok: true; data: ProductInput }
   return {
     ok: true,
     data: {
-      name, slug, description: str('description'), category: category!, priceCentavos: priceCentavos!, retailPriceCentavos,
+      name, slug, description, category: category!, priceCentavos: priceCentavos!, retailPriceCentavos,
       images, isActive: fd.get('isActive') === 'on', isFeatured: fd.get('isFeatured') === 'on', stock,
     },
   }
