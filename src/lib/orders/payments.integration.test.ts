@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
-import { afterAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { buildCheckoutDeps } from '@/lib/checkout/deps'
 import { DuplicateOrderError } from '@/lib/checkout/start-checkout'
 import type { Database } from '@/lib/supabase/database.types'
@@ -9,8 +9,13 @@ import { recordPayment } from './payment-ops-server'
 const EMAIL = 'integration-payments@example.test'
 
 describe.skipIf(process.env.SUPABASE_INTEGRATION !== '1')('payments against local Supabase', () => {
-  const db = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-  const deps = buildCheckoutDeps('sk_test_unused')
+  // Created in beforeAll: describe bodies run during collection even when the suite is skipped.
+  let db: ReturnType<typeof createClient<Database>>
+  let deps: ReturnType<typeof buildCheckoutDeps>
+  beforeAll(() => {
+    db = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+    deps = buildCheckoutDeps('sk_test_unused')
+  })
   const customer = { name: 'Integration', email: EMAIL, phone: '+639171234567', street: '1 Test St', barangay: 'Poblacion', city: 'Makati', province: 'Metro Manila', zip: '1210' }
 
   afterAll(async () => {
