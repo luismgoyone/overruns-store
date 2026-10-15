@@ -1,17 +1,20 @@
 @import "tailwindcss";
 
+/* "Warehouse Editorial": canvas + white cards, ink type, one orange accent, square corners, hairlines, no shadows. */
 @theme {
-  --color-paper: #f5f3ee;
-  --color-card: #ffffff;
+  --color-paper: #f5f3ee; /* canvas */
+  --color-card: #ffffff; /* surface */
   --color-ink: #111111;
   --color-muted: #6b6b6b;
-  --color-tag: #e85d2a;
-  --radius-tag: 4px;
+  --color-hairline: #e2dfd7;
+  --color-tag: #e85d2a; /* fills: CTAs, badges (always with ink text) */
+  --color-tag-ink: #b5401a; /* the same orange darkened for small text on light backgrounds (AA contrast) */
 }
 
 @theme inline {
   --font-sans: var(--font-inter);
-  --font-display: var(--font-archivo-black);
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-space-mono);
 }
 
 html {
@@ -25,8 +28,14 @@ body {
 }
 
 .font-display {
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
 }
 
 /* Keep the footer clear of the pinned mobile add-to-cart bar. */
