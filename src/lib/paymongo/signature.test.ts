@@ -17,6 +17,12 @@ describe('verifyPaymongoSignature', () => {
     expect(verifyPaymongoSignature({ header: null, rawBody: body, secret, livemode: false, nowMs })).toBe(false)
     expect(verifyPaymongoSignature({ header: 'garbage', rawBody: body, secret, livemode: false, nowMs })).toBe(false)
   })
+  it('rejects malformed signatures and timestamps', () => {
+    const header = signPaymongoPayload(body, secret, t)
+    expect(verifyPaymongoSignature({ header: header.replace(/te=([0-9a-f]+)/, 'te=$10'), rawBody: body, secret, livemode: false, nowMs })).toBe(false)
+    expect(verifyPaymongoSignature({ header: header.replace(`t=${t}`, `t=${t}.0`), rawBody: body, secret, livemode: false, nowMs })).toBe(false)
+    expect(verifyPaymongoSignature({ header, rawBody: body, secret, livemode: true, nowMs })).toBe(false)
+  })
   it('rejects stale timestamps (replays)', () => {
     const header = signPaymongoPayload(body, secret, t)
     expect(verifyPaymongoSignature({ header, rawBody: body, secret, livemode: false, nowMs: (t + 3600) * 1000 })).toBe(false)

@@ -36,6 +36,14 @@ describe('handlePaymongoWebhook', () => {
     const r = await handlePaymongoWebhook(req('not json'), deps())
     expect(r.status).toBe(400)
   })
+  it('returns 400 for JSON that is not an object', async () => {
+    expect((await handlePaymongoWebhook(req('null'), deps())).status).toBe(400)
+  })
+  it('propagates database errors so PayMongo retries', async () => {
+    const d = deps(async () => { throw new Error('db down') })
+    await expect(handlePaymongoWebhook(req(event()), d)).rejects.toThrow('db down')
+    expect(d.sendConfirmation).not.toHaveBeenCalled()
+  })
   it('ignores other event types', async () => {
     const d = deps()
     const r = await handlePaymongoWebhook(req(event('payment.failed')), d)

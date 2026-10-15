@@ -19,6 +19,7 @@ export async function handlePaymongoWebhook(req: { rawBody: string; signatureHea
   } catch {
     return { status: 400, body: { error: 'invalid JSON' } }
   }
+  if (typeof event !== 'object' || event === null) return { status: 400, body: { error: 'invalid event' } }
   const attrs = event.data?.attributes
   // livemode only selects which signature (te/li) to check; both are keyed by our secret.
   const signed = verifyPaymongoSignature({ header: req.signatureHeader, rawBody: req.rawBody, secret: deps.secret, livemode: attrs?.livemode === true, nowMs: deps.nowMs() })

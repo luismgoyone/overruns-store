@@ -1,3 +1,4 @@
+import 'server-only'
 import { revalidatePath } from 'next/cache'
 import { sendOrderConfirmation } from '@/lib/email/send-order-confirmation'
 import { handlePaymongoWebhook } from '@/lib/paymongo/webhook'

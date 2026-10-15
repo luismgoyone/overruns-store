@@ -21,11 +21,11 @@ export function verifyPaymongoSignature(opts: {
     const i = kv.indexOf('=')
     return [kv.slice(0, i).trim(), kv.slice(i + 1).trim()]
   }))
-  const t = Number(parts.t)
+  const rawT = parts.t ?? ''
   const given = livemode ? parts.li : parts.te
-  if (!Number.isFinite(t) || !given) return false
-  if (Math.abs(nowMs / 1000 - t) > toleranceSec) return false
-  const expected = Buffer.from(hmac(secret, `${t}.${rawBody}`), 'hex')
+  if (!/^\d+$/.test(rawT) || !given || !/^[0-9a-f]{64}$/i.test(given)) return false
+  if (Math.abs(nowMs / 1000 - Number(rawT)) > toleranceSec) return false
+  const expected = Buffer.from(hmac(secret, `${rawT}.${rawBody}`), 'hex')
   const actual = Buffer.from(given, 'hex')
   return actual.length === expected.length && timingSafeEqual(actual, expected)
 }
