@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { centavosToPesoInput, parsePesoToCentavos, parseProductForm, slugify } from './product-form'
 
 const fd = (entries: Record<string, string>) => {
@@ -85,7 +85,9 @@ describe('parseProductForm limits', () => {
 })
 
 describe('parseProductForm images', () => {
-  const supabaseHost = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://example.supabase.co').host
+  const supabaseHost = 'example.supabase.co'
+  beforeEach(() => vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', `https://${supabaseHost}`))
+  afterEach(() => vi.unstubAllEnvs())
   it.each([
     IMG,
     'products/0f8fad5b-d9cb-469f-a165-70867728950e.webp',
