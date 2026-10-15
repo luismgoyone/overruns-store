@@ -105,6 +105,7 @@ begin
   perform 1 from product_variants v
   join order_items oi on oi.variant_id = v.id
   where oi.order_id = v_order_id
+  order by v.id
   for update of v;
 
   update orders set oversold = true
@@ -124,7 +125,8 @@ $$;
 revoke execute on function public.mark_order_paid(text) from public, anon, authenticated;
 grant execute on function public.mark_order_paid(text) to service_role;
 
-insert into storage.buckets (id, name, public) values ('product-images', 'product-images', true)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('product-images', 'product-images', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
 on conflict (id) do nothing;
 
 create policy "admin uploads product images" on storage.objects
