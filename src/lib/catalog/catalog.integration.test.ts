@@ -1,10 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import type { Database } from '@/lib/supabase/database.types'
 import { getProductBySlug, listProducts } from './queries'
 
 describe.skipIf(process.env.SUPABASE_INTEGRATION !== '1')('catalog queries against local Supabase', () => {
-  const db = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  // Created in beforeAll: describe bodies run during collection even when the suite is skipped.
+  let db: ReturnType<typeof createClient<Database>>
+  beforeAll(() => {
+    db = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  })
 
   it('lists active products newest first', async () => {
     const products = await listProducts(db, { category: null, size: null, sort: 'newest' })
