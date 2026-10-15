@@ -1,19 +1,14 @@
 import 'server-only'
 import { notifyOwner } from '@/lib/email/notify-owner'
 import { sendConfirmationIfUnsent } from '@/lib/email/send-order-confirmation'
-import { expireSession, getCheckoutSession } from '@/lib/paymongo/client'
+import { expireSession, getCheckoutSession, keyLivemode } from '@/lib/paymongo/client'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isPaymentOutcome, type PaymentInfo, type PaymentRecord } from './payments'
 import { cancelPendingOrderCore, reconcileOrderCore, type CancelResult, type PaymentOpsDeps, type ReconcileResult } from './payment-ops'
 
 export const paymongoSecretKey = () => process.env.PAYMONGO_SECRET_KEY?.trim() || null
 
-/** true for a live key, false for a test key, null when it can't be told. */
-export function expectedLivemode(secretKey: string | null): boolean | null {
-  if (secretKey?.startsWith('sk_live_')) return true
-  if (secretKey?.startsWith('sk_test_')) return false
-  return null
-}
+export const expectedLivemode = keyLivemode
 
 function requireKey(): string {
   const key = paymongoSecretKey()
@@ -31,7 +26,7 @@ export async function recordPayment(checkoutId: string, info: PaymentInfo): Prom
   if (error) throw error
   const row = data?.[0]
   if (!row || !isPaymentOutcome(row.outcome)) throw new Error(`record_checkout_payment returned ${JSON.stringify(data)}`)
-  return { orderId: row.order_id, outcome: row.outcome, oversold: row.oversold, amountMismatch: row.amount_mismatch }
+  return { orderId: row.order_id, outcome: row.outcome, oversold: row.oversold, amountMismatch: row.amount_mismatch, newConflict: row.new_conflict }
 }
 
 /**
@@ -42,9 +37,11 @@ type OpsOptions = {
   onStockChange?: () => void
   /** Run emails later (e.g. next/server `after` on a page render) instead of awaiting them. */
   defer?: (fn: () => Promise<void>) => void
+  /** Timeout for the PayMongo GET (shorter on the order page render path). */
+  getTimeoutMs?: number
 }
 
-export function buildPaymentOps({ onStockChange, defer }: OpsOptions = {}): PaymentOpsDeps {
+export function buildPaymentOps({ onStockChange, defer, getTimeoutMs }: OpsOptions = {}): PaymentOpsDeps {
   const db = createAdminClient()
   const later = <A extends unknown[]>(label: string, fn: (...args: A) => Promise<void>) =>
     defer
@@ -52,11 +49,12 @@ export function buildPaymentOps({ onStockChange, defer }: OpsOptions = {}): Paym
       : fn
   return {
     async getOrder(orderId) {
-      const { data, error } = await db.from('orders').select('id, status, paymongo_checkout_id, created_at').eq('id', orderId).maybeSingle()
+      const { data, error } = await db.from('orders').select('id, status, paymongo_checkout_id, paymongo_livemode, created_at').eq('id', orderId).maybeSingle()
       if (error) throw error
-      return data ? { id: data.id, status: data.status, checkoutId: data.paymongo_checkout_id, createdAt: data.created_at } : null
+      return data ? { id: data.id, status: data.status, checkoutId: data.paymongo_checkout_id, livemode: data.paymongo_livemode, createdAt: data.created_at } : null
     },
-    getSession: (checkoutId) => getCheckoutSession(checkoutId, { secretKey: requireKey() }),
+    currentLivemode: keyLivemode(paymongoSecretKey()),
+    getSession: (checkoutId) => getCheckoutSession(checkoutId, { secretKey: requireKey(), timeoutMs: getTimeoutMs }),
     expireSession: (checkoutId) => expireSession(checkoutId, { secretKey: requireKey() }),
     async recordPayment(checkoutId, info) {
       const r = await recordPayment(checkoutId, info)

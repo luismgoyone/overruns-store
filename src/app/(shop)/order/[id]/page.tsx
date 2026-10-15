@@ -24,7 +24,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   // The webhook may never arrive: after ~30s, ask PayMongo directly (once per request; the
   // PendingRefresher re-requests every few seconds for a minute). Emails go out after the response.
   if (shouldReconcile(order, { hasKey: paymongoSecretKey() !== null }) && takeReconcileSlot(order.id)) {
-    const result = await reconcileOrder(order.id, { defer: (fn) => after(fn) })
+    const result = await reconcileOrder(order.id, { defer: (fn) => after(fn), getTimeoutMs: 3_000 })
     if (result === 'paid') order = (await getOrderDetail(createAdminClient(), id)) ?? order
   }
   const a = order.address

@@ -1,10 +1,13 @@
 import type { OrderStatus } from '@/lib/catalog/constants'
-import type { CheckoutSessionInfo } from '@/lib/paymongo/client'
+import { SessionActiveError, type CheckoutSessionInfo } from '@/lib/paymongo/client'
 import { afterPayment, type AfterPaymentDeps, type PaymentInfo, type PaymentRecord } from './payments'
 
-export type OrderPaymentState = { id: string; status: OrderStatus; checkoutId: string | null; createdAt: string }
+/** livemode: mode of the key that created the session (null for orders from before it was recorded). */
+export type OrderPaymentState = { id: string; status: OrderStatus; checkoutId: string | null; livemode: boolean | null; createdAt: string }
 
 export type PaymentOpsDeps = AfterPaymentDeps & {
+  /** Mode of the configured PayMongo key (null when unknown). */
+  currentLivemode: boolean | null
   getOrder(orderId: string): Promise<OrderPaymentState | null>
   /** GET /checkout_sessions/{id}; throws on PayMongo errors. */
   getSession(checkoutId: string): Promise<CheckoutSessionInfo>
@@ -16,7 +19,14 @@ export type PaymentOpsDeps = AfterPaymentDeps & {
   cancelOrder(orderId: string): Promise<boolean>
 }
 
-export type ReconcileResult = 'paid' | 'pending' | 'not_pending' | 'no_session' | 'not_found' | 'error'
+export type ReconcileResult = 'paid' | 'pending' | 'not_pending' | 'no_session' | 'not_found' | 'other_mode' | 'error'
+
+/**
+ * A session made with a test key can't be seen (or paid into this account) with a live key, and vice versa.
+ * After switching keys, such orders are treated as not payable here: reconcile skips them, cancel skips PayMongo.
+ */
+const otherMode = (order: OrderPaymentState, deps: PaymentOpsDeps) =>
+  order.livemode !== null && deps.currentLivemode !== null && order.livemode !== deps.currentLivemode
 
 async function recordAndNotify(checkoutId: string, info: PaymentInfo, source: string, deps: PaymentOpsDeps) {
   const r = await deps.recordPayment(checkoutId, info)
@@ -31,6 +41,7 @@ export async function reconcileOrderCore(orderId: string, deps: PaymentOpsDeps, 
     if (!order) return 'not_found'
     if (order.status !== 'pending') return 'not_pending'
     if (!order.checkoutId) return 'no_session'
+    if (otherMode(order, deps)) return 'other_mode'
     let session: CheckoutSessionInfo
     try {
       session = await deps.getSession(order.checkoutId)
@@ -47,7 +58,7 @@ export async function reconcileOrderCore(orderId: string, deps: PaymentOpsDeps, 
   }
 }
 
-export type CancelResult = { kind: 'cancelled' } | { kind: 'paid' } | { kind: 'not_pending' } | { kind: 'error'; message: string }
+export type CancelResult = { kind: 'cancelled' } | { kind: 'paid' } | { kind: 'not_pending' } | { kind: 'error'; reason: 'unreachable' | 'in_progress'; message: string }
 
 /**
  * Cancels a pending order only after its PayMongo session is closed, so a customer can't pay a cancelled order.
@@ -56,13 +67,15 @@ export type CancelResult = { kind: 'cancelled' } | { kind: 'paid' } | { kind: 'n
 export async function cancelPendingOrderCore(orderId: string, deps: PaymentOpsDeps, source = 'cancel'): Promise<CancelResult> {
   const order = await deps.getOrder(orderId)
   if (!order || order.status !== 'pending') return { kind: 'not_pending' }
-  if (order.checkoutId) {
+  if (order.checkoutId && !otherMode(order, deps)) {
     let state: 'expired' | 'paid'
     try {
       state = await deps.expireSession(order.checkoutId)
     } catch (err) {
       console.error(`[${source}] could not expire the PayMongo session; not cancelling`, { orderId, err })
-      return { kind: 'error', message: "Couldn't reach PayMongo to close the payment page, so the order was not cancelled. Try again in a minute." }
+      return err instanceof SessionActiveError
+        ? { kind: 'error', reason: 'in_progress', message: 'A payment may be in progress — wait a few minutes, then use Re-check payment.' }
+        : { kind: 'error', reason: 'unreachable', message: "Couldn't reach PayMongo to close the payment page, so the order was not cancelled. Try again in a minute." }
     }
     if (state === 'paid') {
       const session = await deps.getSession(order.checkoutId).catch(() => null)
@@ -84,6 +97,7 @@ export async function expireStalePendingCore(listStalePending: () => Promise<str
     if (rec === 'paid') { summary.paid++; continue }
     if (rec === 'error') { summary.failed++; continue }
     if (rec === 'not_pending' || rec === 'not_found') continue
+    // 'pending', 'no_session' and 'other_mode' fall through to cancel.
     try {
       const r = await cancelPendingOrderCore(id, deps, 'cron')
       if (r.kind === 'cancelled') summary.cancelled++

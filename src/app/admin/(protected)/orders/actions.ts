@@ -34,7 +34,9 @@ export async function updateOrderStatus(formData: FormData) {
   if (to === 'cancelled') {
     // Close the PayMongo payment page first, so the customer can't pay an order we've cancelled.
     const result = await cancelPendingOrder(id, { onStockChange: revalidateCatalog })
-    const notice = { cancelled: 'cancelled', paid: 'already-paid', not_pending: 'not-pending', error: 'cancel-failed' }[result.kind]
+    const notice = result.kind === 'error'
+      ? (result.reason === 'in_progress' ? 'cancel-in-progress' : 'cancel-failed')
+      : { cancelled: 'cancelled', paid: 'already-paid', not_pending: 'not-pending' }[result.kind]
     backToOrder(id, notice)
   }
 

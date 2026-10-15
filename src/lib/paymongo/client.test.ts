@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createCheckoutSession, expireSession, getCheckoutSession, parseCheckoutSession, PayMongoError } from './client'
+import { createCheckoutSession, expireSession, getCheckoutSession, keyLivemode, parseCheckoutSession, PayMongoError, SessionActiveError } from './client'
 
 const input = {
   orderId: '3f2a9c1e-0000-4000-8000-000000000000',
@@ -107,5 +107,37 @@ describe('expireSession', () => {
   it('throws when PayMongo is unreachable', async () => {
     const fetchImpl = vi.fn().mockRejectedValue(new TypeError('fetch failed'))
     await expect(expireSession('cs_123', { secretKey: 'k', fetchImpl })).rejects.toThrow()
+  })
+})
+
+describe('expireSession edge cases', () => {
+  it('treats a session PayMongo no longer knows (404 on expire and GET) as expired', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(json({ errors: [{ code: 'resource_not_found' }] }, 404))
+    await expect(expireSession('cs_123', { secretKey: 'k', fetchImpl })).resolves.toBe('expired')
+  })
+  it('throws SessionActiveError when the session is still open (a payment may be in progress)', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(json({ errors: [] }, 400))
+      .mockResolvedValueOnce(json(session({ status: 'active' })))
+    await expect(expireSession('cs_123', { secretKey: 'k', fetchImpl })).rejects.toBeInstanceOf(SessionActiveError)
+  })
+})
+
+describe('getCheckoutSession timeout', () => {
+  it('uses a shorter timeout when asked (order page render path)', async () => {
+    const spy = vi.spyOn(AbortSignal, 'timeout')
+    const fetchImpl = vi.fn().mockResolvedValue(json(session({})))
+    await getCheckoutSession('cs_123', { secretKey: 'k', fetchImpl, timeoutMs: 3_000 })
+    expect(spy).toHaveBeenCalledWith(3_000)
+    spy.mockRestore()
+  })
+})
+
+describe('keyLivemode', () => {
+  it('reads the mode from the secret key prefix', () => {
+    expect(keyLivemode('sk_live_abc')).toBe(true)
+    expect(keyLivemode('sk_test_abc')).toBe(false)
+    expect(keyLivemode('weird')).toBeNull()
+    expect(keyLivemode(null)).toBeNull()
   })
 })

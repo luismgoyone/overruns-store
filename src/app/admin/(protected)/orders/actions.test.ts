@@ -47,8 +47,12 @@ describe('updateOrderStatus', () => {
     expect(await redirectOf(updateOrderStatus(fd({ id: ID, from: 'pending', to: 'cancelled' })))).toBe(`/admin/orders/${ID}?notice=already-paid`)
   })
   it('does not cancel when PayMongo could not be reached', async () => {
-    ops.cancelPendingOrder.mockResolvedValue({ kind: 'error', message: 'nope' })
+    ops.cancelPendingOrder.mockResolvedValue({ kind: 'error', reason: 'unreachable', message: 'nope' })
     expect(await redirectOf(updateOrderStatus(fd({ id: ID, from: 'pending', to: 'cancelled' })))).toBe(`/admin/orders/${ID}?notice=cancel-failed`)
+  })
+  it('tells the admin a payment may be in progress when the PayMongo page is still open', async () => {
+    ops.cancelPendingOrder.mockResolvedValue({ kind: 'error', reason: 'in_progress', message: 'x' })
+    expect(await redirectOf(updateOrderStatus(fd({ id: ID, from: 'pending', to: 'cancelled' })))).toBe(`/admin/orders/${ID}?notice=cancel-in-progress`)
   })
   it('still ships paid orders with a guarded update', async () => {
     await updateOrderStatus(fd({ id: ID, from: 'paid', to: 'shipped' }))

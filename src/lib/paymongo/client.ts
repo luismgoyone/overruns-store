@@ -10,7 +10,22 @@ export class PayMongoError extends Error {
   }
 }
 
-type Auth = { secretKey: string; fetchImpl?: typeof fetch }
+type Auth = { secretKey: string; fetchImpl?: typeof fetch; timeoutMs?: number }
+
+/** The session is still open and PayMongo would not expire it: a payment may be in progress. */
+export class SessionActiveError extends PayMongoError {
+  constructor(status: number, body: unknown) {
+    super('PayMongo checkout session is still active', status, body)
+    this.name = 'SessionActiveError'
+  }
+}
+
+/** true for a live secret key, false for a test key, null when it can't be told. */
+export function keyLivemode(secretKey: string | null | undefined): boolean | null {
+  if (secretKey?.startsWith('sk_live_')) return true
+  if (secretKey?.startsWith('sk_test_')) return false
+  return null
+}
 
 const authHeaders = (secretKey: string) => ({
   Accept: 'application/json',
@@ -55,9 +70,9 @@ function assertCheckoutId(id: string) {
   if (!CHECKOUT_ID.test(id)) throw new PayMongoError('Not a PayMongo checkout session id', 0, null)
 }
 
-export async function getCheckoutSession(id: string, { secretKey, fetchImpl = fetch }: Auth): Promise<CheckoutSessionInfo> {
+export async function getCheckoutSession(id: string, { secretKey, fetchImpl = fetch, timeoutMs = 8_000 }: Auth): Promise<CheckoutSessionInfo> {
   assertCheckoutId(id)
-  const res = await fetchImpl(`${API_BASE}/checkout_sessions/${id}`, { method: 'GET', signal: AbortSignal.timeout(8_000), headers: authHeaders(secretKey) })
+  const res = await fetchImpl(`${API_BASE}/checkout_sessions/${id}`, { method: 'GET', signal: AbortSignal.timeout(timeoutMs), headers: authHeaders(secretKey) })
   const body = await res.json().catch(() => null)
   if (!res.ok) throw new PayMongoError(`PayMongo get checkout session failed (${res.status})`, res.status, body)
   return parseCheckoutSession(body?.data)
@@ -77,9 +92,17 @@ export async function expireSession(id: string, auth: Auth): Promise<'expired' |
     return s.paid ? 'paid' : 'expired'
   }
   // PayMongo refuses to expire a paid or already-expired session; look at it to tell which.
-  const s = await getCheckoutSession(id, auth)
+  let s: CheckoutSessionInfo
+  try {
+    s = await getCheckoutSession(id, auth)
+  } catch (err) {
+    // Unknown to this account on both calls: nothing can be paid on it.
+    if (res.status === 404 && err instanceof PayMongoError && err.status === 404) return 'expired'
+    throw err
+  }
   if (s.paid) return 'paid'
   if (s.status === 'expired') return 'expired'
+  if (s.status === 'active') throw new SessionActiveError(res.status, body)
   throw new PayMongoError(`PayMongo expire checkout session failed (${res.status})`, res.status, body)
 }
 

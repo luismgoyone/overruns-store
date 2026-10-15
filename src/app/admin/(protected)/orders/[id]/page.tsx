@@ -19,6 +19,8 @@ const NOTICES: Record<string, { text: string; warn?: boolean }> = {
   cancelled: { text: 'Order cancelled and its PayMongo payment page closed.' },
   'already-paid': { text: 'PayMongo says this order was already paid, so it was NOT cancelled. It is now marked paid; ship it or refund it in PayMongo.', warn: true },
   'cancel-failed': { text: "Couldn't reach PayMongo to close the payment page, so the order was NOT cancelled. Try again in a minute.", warn: true },
+  'cancel-in-progress': { text: 'A payment may be in progress — wait a few minutes, then use Re-check payment. The order was NOT cancelled.', warn: true },
+  'recheck-other-mode': { text: 'This order was created with the other PayMongo key mode (test vs live), so it cannot be checked with the current key.', warn: true },
   'not-pending': { text: 'This order is no longer pending, so nothing changed.' },
   'recheck-paid': { text: 'PayMongo confirms the payment. The order is now paid.' },
   'recheck-pending': { text: 'PayMongo has no payment for this order yet.' },

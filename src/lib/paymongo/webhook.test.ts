@@ -10,7 +10,7 @@ const event = (type = 'checkout_session.payment.paid', { id = 'cs_123' as unknow
   JSON.stringify({ data: { id: 'evt_1', type: 'event', attributes: { type, livemode, data: { id, type: 'checkout_session', attributes } } } })
 const paidPayment = (amount: number, currency = 'PHP') => ({ id: 'pay_1', type: 'payment', attributes: { amount, currency, status: 'paid' } })
 
-const record = (over: Partial<PaymentRecord> = {}): PaymentRecord => ({ orderId: 'order-1', outcome: 'paid', oversold: false, amountMismatch: false, ...over })
+const record = (over: Partial<PaymentRecord> = {}): PaymentRecord => ({ orderId: 'order-1', outcome: 'paid', oversold: false, amountMismatch: false, newConflict: false, ...over })
 
 function deps(r: PaymentRecord | (() => Promise<PaymentRecord>) = record(), over: Partial<WebhookDeps> = {}) {
   return {
@@ -66,11 +66,19 @@ describe('handlePaymongoWebhook', () => {
   })
   it('flags a payment for a cancelled order, alerts the owner, and still answers 200', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const d = deps(record({ outcome: 'paid_after_cancel' }))
+    const d = deps(record({ outcome: 'paid_after_cancel', newConflict: true }))
     const r = await handlePaymongoWebhook(req(event()), d)
     expect(r).toEqual({ status: 200, body: { conflict: 'paid_after_cancel', orderId: 'order-1' } })
     expect(d.sendConfirmation).not.toHaveBeenCalled()
     expect(d.notifyOwner).toHaveBeenCalledWith('order-1', ['paid_after_cancel'])
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('PAID AFTER CANCEL'), expect.anything())
+  })
+  it('alerts the owner about a paid-after-cancel only the first time it is flagged', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const d = deps(record({ outcome: 'paid_after_cancel', newConflict: false }))
+    const r = await handlePaymongoWebhook(req(event()), d)
+    expect(r.status).toBe(200)
+    expect(d.notifyOwner).not.toHaveBeenCalled()
     expect(error).toHaveBeenCalledWith(expect.stringContaining('PAID AFTER CANCEL'), expect.anything())
   })
   it('logs an error for an unknown checkout session and answers 200', async () => {

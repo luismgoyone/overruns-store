@@ -9,7 +9,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const BATCH = 100
+const BATCH = 40
 
 // Daily (vercel.json): reconcile, then expire + cancel, pending orders older than 24 hours.
 export async function GET(request: Request) {

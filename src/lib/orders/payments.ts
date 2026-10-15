@@ -1,6 +1,13 @@
 // What happened when a PayMongo payment was recorded against an order (see record_checkout_payment in SQL).
 export type PaymentOutcome = 'paid' | 'already_paid' | 'paid_after_cancel' | 'unknown'
-export type PaymentRecord = { orderId: string | null; outcome: PaymentOutcome; oversold: boolean; amountMismatch: boolean }
+export type PaymentRecord = {
+  orderId: string | null
+  outcome: PaymentOutcome
+  oversold: boolean
+  amountMismatch: boolean
+  /** paid_after_cancel only: true on the call that first flagged it (alert the owner once). */
+  newConflict: boolean
+}
 export type PaymentInfo = { paidCentavos: number | null; currency: string | null }
 export type OwnerAlert = 'oversold' | 'amount_mismatch' | 'paid_after_cancel'
 
@@ -32,7 +39,7 @@ export async function afterPayment(r: PaymentRecord, ctx: { checkoutId: string; 
   const orderId = r.orderId
   if (r.outcome === 'paid_after_cancel') {
     console.error(`[${ctx.source}] PAID AFTER CANCEL: money arrived for a cancelled order. Refund it in PayMongo or fulfil it.`, log)
-    await quietly('owner alert', log, () => deps.notifyOwner(orderId, ['paid_after_cancel']))
+    if (r.newConflict) await quietly('owner alert', log, () => deps.notifyOwner(orderId, ['paid_after_cancel']))
     return
   }
   if (r.outcome === 'already_paid') console.info(`[${ctx.source}] order already paid`, log)

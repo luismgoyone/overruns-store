@@ -1,8 +1,8 @@
 import 'server-only'
 import { SHIPPING_FEE_CENTAVOS, siteUrl } from '@/lib/config'
-import { createCheckoutSession, expireSession } from '@/lib/paymongo/client'
+import { createCheckoutSession, expireSession, keyLivemode } from '@/lib/paymongo/client'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { DuplicateOrderError, type StartCheckoutDeps } from './start-checkout'
+import { DuplicateOrderError, isIdempotencyKeyViolation, type StartCheckoutDeps } from './start-checkout'
 
 export function buildCheckoutDeps(secretKey: string): StartCheckoutDeps {
   const db = createAdminClient()
@@ -31,13 +31,14 @@ export function buildCheckoutDeps(secretKey: string): StartCheckoutDeps {
         },
       })
       if (error) {
-        if (error.code === '23505' && idempotencyKey) throw new DuplicateOrderError()
+        if (idempotencyKey && isIdempotencyKeyViolation(error)) throw new DuplicateOrderError()
         throw error
       }
       return data
     },
     async attachCheckout(orderId, checkoutId, checkoutUrl) {
-      const { error } = await db.from('orders').update({ paymongo_checkout_id: checkoutId, paymongo_checkout_url: checkoutUrl }).eq('id', orderId)
+      // Record the key's mode so a later test -> live key switch doesn't strand this order.
+      const { error } = await db.from('orders').update({ paymongo_checkout_id: checkoutId, paymongo_checkout_url: checkoutUrl, paymongo_livemode: keyLivemode(secretKey) }).eq('id', orderId)
       if (error) throw error
     },
     async cancelOrder(orderId) {
