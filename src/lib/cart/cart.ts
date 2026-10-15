@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { SIZES, type Size } from '@/lib/catalog/constants'
+import type { CartProblem } from '@/lib/checkout/types'
 
 export const CART_STORAGE_KEY = 'overruns-cart-v1'
 export const MAX_QTY_PER_LINE = 10
@@ -25,6 +26,7 @@ export type CartAction =
   | { type: 'remove'; variantId: string }
   | { type: 'clear' }
   | { type: 'hydrate'; lines: CartLine[] }
+  | { type: 'applyProblems'; problems: CartProblem[] }
 
 const clampQty = (qty: number, maxQty: number) => Math.max(0, Math.min(Math.floor(qty), maxQty, MAX_QTY_PER_LINE))
 
@@ -55,6 +57,17 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
       return { ...state, lines: [] }
     case 'hydrate':
       return { lines: action.lines, hydrated: true }
+    case 'applyProblems': {
+      const byId = new Map(action.problems.map((p) => [p.variantId, p]))
+      const lines = state.lines.flatMap((l) => {
+        const p = byId.get(l.variantId)
+        if (!p) return [l]
+        if (p.reason === 'unavailable' || p.available <= 0) return []
+        if (p.reason === 'insufficient_stock') return [{ ...l, qty: Math.min(l.qty, p.available), maxQty: p.available }]
+        return [{ ...l, priceCentavos: p.currentPriceCentavos ?? l.priceCentavos, maxQty: p.available, qty: Math.min(l.qty, p.available) }]
+      })
+      return { ...state, lines }
+    }
   }
 }
 
