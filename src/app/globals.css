@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f5f3ee;
+  --color-card: #ffffff;
+  --color-ink: #111111;
+  --color-muted: #6b6b6b;
+  --color-tag: #e85d2a;
+  --radius-tag: 4px;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-archivo-black);
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+.font-display {
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
