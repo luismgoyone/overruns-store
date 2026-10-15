@@ -2,9 +2,26 @@
 
 A mobile-first storefront for overrun apparel: browse size-stocked products, check out with GCash, Maya or card through **PayMongo test mode**, get a confirmation email, and manage products and orders from `/admin`.
 
-Spec: [`docs/spec.md`](docs/spec.md) · Plan: [`docs/superpowers/plans/2026-10-15-overruns-store-poc.md`](docs/superpowers/plans/2026-10-15-overruns-store-poc.md)
+**Live:** https://shop.luisgoyone.com (also https://overruns-store.vercel.app) · **Admin:** https://shop.luisgoyone.com/admin/login
+
+Spec: [`docs/spec.md`](docs/spec.md) · Design: [Stitch mockups](https://stitch.withgoogle.com/projects/17086113764447135765) (private to the owner's Google account) · Plan: [`docs/superpowers/plans/2026-10-15-overruns-store-poc.md`](docs/superpowers/plans/2026-10-15-overruns-store-poc.md)
 
 **Stack:** Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · Supabase (Postgres, Auth, Storage) · PayMongo Checkout · Resend · Vitest + pgTAP · Vercel
+
+## Design
+
+"Warehouse Editorial", generated in Stitch and built in PR #14:
+- Fonts: Space Grotesk for headings, Space Mono for small uppercase labels, Inter for body text.
+- Colours: canvas `#F5F3EE`, ink `#111111`, muted `#6B6B6B`, hairline `#E2DFD7`, and tag orange `#E85D2A`, with a darker orange `#B5401A` for small text.
+- Square corners, 1px borders, no shadows.
+- The tokens live in `src/app/globals.css` (`@theme`) and the shared control styles in `src/components/ui/styles.ts`.
+- Orange buttons use black text, because white on that orange fails contrast.
+
+## Admin
+
+- Sign in at `/admin/login`. Nothing in the store links to it.
+- **Orders** (`/admin/orders`): filter by status, open an order, mark it shipped or cancelled. Oversold orders are flagged in orange.
+- **Products** (`/admin/products`): add or edit a product, upload photos (JPG, PNG or WebP, up to 5 MB; the first photo is the cover), and set stock per size. Untick **Active** to hide a product without deleting it.
 
 ## Prerequisites
 
@@ -78,7 +95,8 @@ The first call marks the order paid and lowers stock; repeating it is a no-op.
      -d '{"data":{"attributes":{"url":"https://<project>.vercel.app/api/webhooks/paymongo","events":["checkout_session.payment.paid"]}}}'
    ```
    Put the returned `secret_key` (`whsk_…`) in Vercel as `PAYMONGO_WEBHOOK_SECRET` and redeploy.
-4. **Resend:** add `RESEND_API_KEY`. Without a verified domain, Resend only delivers mail from `onboarding@resend.dev` to the Resend account owner's own address.
+4. **Custom domain:** `npx vercel domains add shop.<domain> <project>`, then add the DNS record Vercel asks for (an `A` record to `76.76.21.21`; on Cloudflare set it to DNS only, grey cloud). Set `NEXT_PUBLIC_SITE_URL` to the new domain and redeploy so payment return links and email links use it.
+5. **Resend:** add `RESEND_API_KEY`. Without a verified domain, Resend only delivers mail from `onboarding@resend.dev` to the Resend account owner's own address.
 
 ## Before each client demo
 
