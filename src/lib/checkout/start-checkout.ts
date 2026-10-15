@@ -15,6 +15,12 @@ export class DuplicateOrderError extends Error {
   }
 }
 
+/** A Postgres unique violation on orders.idempotency_key (and not some other unique constraint). */
+export function isIdempotencyKeyViolation(error: { code?: string; message?: string; details?: string } | null | undefined): boolean {
+  if (error?.code !== '23505') return false
+  return `${error.message ?? ''} ${error.details ?? ''}`.includes('orders_idempotency_key_key') || /\(idempotency_key\)/.test(error.details ?? '')
+}
+
 export type StartCheckoutDeps = {
   loadVariants(ids: string[]): Promise<DbVariant[]>
   findOrderByKey(idempotencyKey: string): Promise<ExistingOrder | null>
