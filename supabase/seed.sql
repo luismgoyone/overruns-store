@@ -12,11 +12,23 @@ insert into public.products (slug, name, description, category, price_centavos, 
   ('canvas-tote-natural', 'Canvas Tote', 'Heavy canvas tote with inner pocket.', 'accessories', 35000, 99000, false, now() - interval '11 days'),
   ('dad-cap-washed-blue', 'Dad Cap', 'Washed cotton cap with adjustable strap.', 'accessories', 39000, 119900, false, now() - interval '12 days');
 
--- Placeholder photos until the owner uploads real ones.
-update public.products set images = array[
-  'https://picsum.photos/seed/' || slug || '-1/800/800',
-  'https://picsum.photos/seed/' || slug || '-2/800/800'
-];
+-- Demo photos (generated in Stitch) bundled in public/demo/products until the owner uploads real ones.
+update public.products p set images = v.images
+from (values
+  ('canvas-tote-natural', array['/demo/products/canvas-tote-natural-1.jpg', '/demo/products/canvas-tote-natural-2.jpg']),
+  ('cargo-shorts-olive', array['/demo/products/cargo-shorts-olive-1.jpg']),
+  ('coach-jacket-black', array['/demo/products/coach-jacket-black-1.jpg', '/demo/products/coach-jacket-black-2.jpg']),
+  ('crewneck-sweatshirt-grey', array['/demo/products/crewneck-sweatshirt-grey-1.jpg']),
+  ('dad-cap-washed-blue', array['/demo/products/dad-cap-washed-blue-1.jpg']),
+  ('heavyweight-tee-black', array['/demo/products/heavyweight-tee-black-1.jpg']),
+  ('kids-graphic-tee-yellow', array['/demo/products/kids-graphic-tee-yellow-1.jpg']),
+  ('oxford-button-down-white', array['/demo/products/oxford-button-down-white-1.jpg', '/demo/products/oxford-button-down-white-2.jpg']),
+  ('quilted-vest-navy', array['/demo/products/quilted-vest-navy-1.jpg']),
+  ('slim-chino-khaki', array['/demo/products/slim-chino-khaki-1.jpg']),
+  ('striped-polo-navy', array['/demo/products/striped-polo-navy-1.jpg', '/demo/products/striped-polo-navy-2.jpg']),
+  ('track-pants-black', array['/demo/products/track-pants-black-1.jpg'])
+) as v(slug, images)
+where p.slug = v.slug;
 
 insert into public.product_variants (product_id, size, stock)
 select p.id, v.size::public.product_size, v.stock
