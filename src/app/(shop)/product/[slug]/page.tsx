@@ -50,7 +50,7 @@ export default async function ProductPage({ params }: Props) {
           <h1 className="font-display text-3xl leading-tight lg:text-4xl">{product.name}</h1>
           <div className="flex flex-wrap items-center gap-3">
             <PriceTag price={product.priceCentavos} retail={product.retailPriceCentavos} size="lg" />
-            {off ? <span className="border border-tag bg-tag/10 px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.1em] text-tag-ink">−{off}% off retail</span> : null}
+            {off ? <span className="border border-tag bg-tag/10 px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.1em] text-tag-ink">{off}% off retail</span> : null}
           </div>
         </div>
         <div className="border-t border-hairline pt-6">

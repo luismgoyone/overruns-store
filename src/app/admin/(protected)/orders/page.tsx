@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { adminHeader, adminTitle, table, td, th } from '@/components/admin/admin-ui'
-import { StatusBadge } from '@/components/admin/status-badge'
+import { StatusBadge } from '@/components/ui/status-badge'
 import { monoLabel } from '@/components/ui/styles'
 import { ORDER_STATUSES } from '@/lib/admin/order-status'
 import { requireAdmin } from '@/lib/auth/require-admin'

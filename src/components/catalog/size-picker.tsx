@@ -20,7 +20,7 @@ export function SizePicker({ variants, selected, onSelect }: { variants: Variant
               aria-label={soldOut ? `${sizeLabel(v.size)} (sold out)` : undefined}
               onClick={() => onSelect(v.id)}
               className={`h-12 border px-2 font-mono text-sm uppercase transition-colors ${v.size === 'OS' ? 'col-span-2' : ''} ${
-                soldOut ? 'cursor-not-allowed border-hairline bg-paper text-muted/60' : isSelected ? 'border-ink bg-ink text-paper' : 'border-hairline bg-card hover:border-ink'
+                soldOut ? 'cursor-not-allowed border-hairline bg-paper text-muted/60' : isSelected ? 'border-ink bg-ink text-paper' : 'border-muted bg-card hover:border-ink'
               }`}
             >
               {soldOut ? <s>{sizeLabel(v.size)}</s> : sizeLabel(v.size)}

@@ -9,7 +9,7 @@ export const buttonInk = `${buttonBase} border-ink bg-ink text-paper hover:bg-ca
 export const buttonSecondary = `${buttonBase} border-ink bg-card text-ink hover:bg-ink hover:text-paper`
 
 const inputCore =
-  'w-full border border-hairline text-base text-ink placeholder:text-muted/70 hover:border-muted focus:border-ink focus:bg-card focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink aria-invalid:border-tag'
+  'w-full border border-muted text-base text-ink placeholder:text-muted hover:border-ink focus:border-ink focus:bg-card focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink aria-invalid:border-tag'
 /** Text input inside a white panel (canvas-tinted field). */
 export const inputBase = `${inputCore} h-12 bg-paper px-3`
 /** Text input placed directly on the canvas background (white field). */

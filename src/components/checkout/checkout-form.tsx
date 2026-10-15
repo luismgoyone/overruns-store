@@ -70,11 +70,11 @@ export function CheckoutForm() {
         {state.status === 'error' ? <p role="alert" className="border border-tag bg-card p-3 text-sm">{state.message}</p> : null}
 
         <fieldset className="space-y-5">
-          <legend className={`mb-5 w-full border-b border-hairline pb-3 font-mono text-sm font-bold uppercase tracking-[0.15em]`}>01 // Contact</legend>
+          <legend className={`mb-5 w-full border-b border-hairline pb-3 font-mono text-sm font-bold uppercase tracking-[0.15em]`}><span aria-hidden>01 // </span>Contact</legend>
           <div className="grid gap-5 sm:grid-cols-2">{fields.slice(0, 3).map(field)}</div>
         </fieldset>
         <fieldset className="space-y-5">
-          <legend className={`mb-5 w-full border-b border-hairline pb-3 font-mono text-sm font-bold uppercase tracking-[0.15em]`}>02 // Delivery address</legend>
+          <legend className={`mb-5 w-full border-b border-hairline pb-3 font-mono text-sm font-bold uppercase tracking-[0.15em]`}><span aria-hidden>02 // </span>Delivery address</legend>
           <div className="grid gap-5 sm:grid-cols-2">{fields.slice(3).map(field)}</div>
         </fieldset>
       </div>
