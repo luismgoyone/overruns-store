@@ -10,6 +10,79 @@ export class PayMongoError extends Error {
   }
 }
 
+type Auth = { secretKey: string; fetchImpl?: typeof fetch }
+
+const authHeaders = (secretKey: string) => ({
+  Accept: 'application/json',
+  'Content-Type': 'application/json',
+  Authorization: `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`,
+})
+
+export const CHECKOUT_ID = /^cs_[A-Za-z0-9]{1,190}$/
+
+export type CheckoutSessionInfo = {
+  id: string
+  status: string | null
+  paid: boolean
+  paidCentavos: number | null
+  currency: string | null
+  livemode: boolean | null
+}
+
+type Resource = { id?: unknown; attributes?: Record<string, unknown> | null } | null | undefined
+const attrsOf = (r: unknown) => ((r as Resource)?.attributes ?? {}) as Record<string, unknown>
+
+// Accepts a checkout_session resource, from GET /checkout_sessions/{id} or a webhook event's data.
+export function parseCheckoutSession(resource: unknown): CheckoutSessionInfo {
+  const a = attrsOf(resource)
+  const payments = Array.isArray(a.payments) ? a.payments.map(attrsOf) : []
+  const paidPayments = payments.filter((p) => p.status === 'paid')
+  const intent = attrsOf(a.payment_intent)
+  const paid = paidPayments.length > 0 || intent.status === 'succeeded'
+  const amounts = paidPayments.map((p) => p.amount).filter((n): n is number => typeof n === 'number')
+  const currency = paidPayments.map((p) => p.currency).find((c): c is string => typeof c === 'string') ?? null
+  return {
+    id: String((resource as Resource)?.id ?? ''),
+    status: typeof a.status === 'string' ? a.status : null,
+    paid,
+    paidCentavos: amounts.length > 0 ? amounts.reduce((x, y) => x + y, 0) : null,
+    currency,
+    livemode: typeof a.livemode === 'boolean' ? a.livemode : null,
+  }
+}
+
+function assertCheckoutId(id: string) {
+  if (!CHECKOUT_ID.test(id)) throw new PayMongoError('Not a PayMongo checkout session id', 0, null)
+}
+
+export async function getCheckoutSession(id: string, { secretKey, fetchImpl = fetch }: Auth): Promise<CheckoutSessionInfo> {
+  assertCheckoutId(id)
+  const res = await fetchImpl(`${API_BASE}/checkout_sessions/${id}`, { method: 'GET', signal: AbortSignal.timeout(8_000), headers: authHeaders(secretKey) })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new PayMongoError(`PayMongo get checkout session failed (${res.status})`, res.status, body)
+  return parseCheckoutSession(body?.data)
+}
+
+/**
+ * Closes a checkout session so it can't be paid any more. Resolves 'expired' when the session is closed
+ * (now or before) and 'paid' when it was already paid; throws when its state is unknown or it's still open.
+ */
+export async function expireSession(id: string, auth: Auth): Promise<'expired' | 'paid'> {
+  assertCheckoutId(id)
+  const { secretKey, fetchImpl = fetch } = auth
+  const res = await fetchImpl(`${API_BASE}/checkout_sessions/${id}/expire`, { method: 'POST', signal: AbortSignal.timeout(8_000), headers: authHeaders(secretKey) })
+  const body = await res.json().catch(() => null)
+  if (res.ok) {
+    const s = parseCheckoutSession(body?.data)
+    return s.paid ? 'paid' : 'expired'
+  }
+  // PayMongo refuses to expire a paid or already-expired session; look at it to tell which.
+  const s = await getCheckoutSession(id, auth)
+  if (s.paid) return 'paid'
+  if (s.status === 'expired') return 'expired'
+  throw new PayMongoError(`PayMongo expire checkout session failed (${res.status})`, res.status, body)
+}
+
 export type CheckoutSessionInput = {
   orderId: string
   lines: PricedLine[]
@@ -22,7 +95,7 @@ export type CheckoutSessionInput = {
 
 export async function createCheckoutSession(
   input: CheckoutSessionInput,
-  { secretKey, fetchImpl = fetch }: { secretKey: string; fetchImpl?: typeof fetch },
+  { secretKey, fetchImpl = fetch }: Auth,
 ): Promise<{ id: string; checkoutUrl: string }> {
   const lineItems = input.lines.map((l) => ({
     currency: 'PHP',
@@ -35,11 +108,7 @@ export async function createCheckoutSession(
   const res = await fetchImpl(`${API_BASE}/checkout_sessions`, {
     method: 'POST',
     signal: AbortSignal.timeout(15_000),
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`,
-    },
+    headers: authHeaders(secretKey),
     body: JSON.stringify({
       data: {
         attributes: {

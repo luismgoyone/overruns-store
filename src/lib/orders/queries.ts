@@ -14,6 +14,12 @@ export type OrderDetail = {
   totalCentavos: number
   status: OrderStatus
   oversold: boolean
+  /** PayMongo took a payment after the order was cancelled. */
+  paymentConflict: boolean
+  amountMismatch: boolean
+  confirmationSentAt: string | null
+  paidAt: string | null
+  idempotencyKey: string | null
   createdAt: string
   items: OrderItem[]
 }
@@ -25,7 +31,7 @@ export async function getOrderDetail(db: Db, id: string): Promise<OrderDetail | 
   if (!isUuid(id)) return null
   const { data, error } = await db
     .from('orders')
-    .select('id, customer_name, email, phone, address, subtotal_centavos, shipping_centavos, total_centavos, status, oversold, created_at, order_items(product_name, size, qty, price_centavos)')
+    .select('id, customer_name, email, phone, address, subtotal_centavos, shipping_centavos, total_centavos, status, oversold, payment_conflict, amount_mismatch, confirmation_sent_at, paid_at, idempotency_key, created_at, order_items(product_name, size, qty, price_centavos)')
     .eq('id', id)
     .maybeSingle()
   if (error) throw error
@@ -42,6 +48,11 @@ export async function getOrderDetail(db: Db, id: string): Promise<OrderDetail | 
     totalCentavos: data.total_centavos,
     status: data.status,
     oversold: data.oversold,
+    paymentConflict: data.payment_conflict,
+    amountMismatch: data.amount_mismatch,
+    confirmationSentAt: data.confirmation_sent_at,
+    paidAt: data.paid_at,
+    idempotencyKey: data.idempotency_key,
     createdAt: data.created_at,
     items: data.order_items.map((i) => ({ productName: i.product_name, size: i.size, qty: i.qty, priceCentavos: i.price_centavos })),
   }

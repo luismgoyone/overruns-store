@@ -7,6 +7,13 @@ export function signPaymongoPayload(rawBody: string, secret: string, timestampSe
   return `t=${timestampSec},te=${hmac(secret, `${timestampSec}.${rawBody}`)},li=`
 }
 
+/** Which of the header's signatures matches the body ('te' = test mode, 'li' = live), or null if none does. */
+export function matchPaymongoSignature(opts: { header: string | null; rawBody: string; secret: string; nowMs: number; toleranceSec?: number }): 'te' | 'li' | null {
+  if (verifyPaymongoSignature({ ...opts, livemode: false })) return 'te'
+  if (verifyPaymongoSignature({ ...opts, livemode: true })) return 'li'
+  return null
+}
+
 export function verifyPaymongoSignature(opts: {
   header: string | null
   rawBody: string
