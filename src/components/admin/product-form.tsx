@@ -79,6 +79,8 @@ export function ProductForm({ product }: { product: Product | null }) {
             <label key={s} className="block space-y-2 border border-hairline bg-paper p-2 text-center font-mono text-[11px] font-bold uppercase tracking-[0.1em]">
               {sizeLabel(s)}
               <input name={`stock_${s}`} inputMode="numeric" defaultValue={text(`stock_${s}`, stockFor(s)?.toString())} className={inputCompact} />
+              {/* Saves apply the difference to the live stock, so sales made while this form was open aren't lost. */}
+              {stockFor(s) !== undefined ? <input type="hidden" name={`stock_orig_${s}`} value={stockFor(s)} /> : null}
               <Err e={e} k={`stock_${s}`} />
             </label>
           ))}

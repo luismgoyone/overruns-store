@@ -40,9 +40,13 @@ describe('parseProductForm', () => {
       data: {
         name: 'Coach Jacket', slug: 'coach-jacket', description: 'Nylon', category: 'outerwear',
         priceCentavos: 149000, retailPriceCentavos: 429900, images: [IMG],
-        isActive: true, isFeatured: false, stock: { M: 2, L: 0 },
+        isActive: true, isFeatured: false, stock: { M: 2, L: 0 }, stockOrig: {},
       },
     })
+  })
+  it('reads the stock values the form was loaded with, ignoring junk', () => {
+    const r = parseProductForm(fd({ ...base, stock_orig_M: '5', stock_orig_L: '', stock_orig_XL: 'abc', stock_orig_S: '3' }))
+    expect(r.ok && r.data.stockOrig).toEqual({ M: 5, S: 3 })
   })
   it('reports field errors', () => {
     const r = parseProductForm(fd({ ...base, name: '', category: 'shoes', price: 'abc', retailPrice: '100', stock_M: '-1' }))

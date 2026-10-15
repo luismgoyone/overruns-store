@@ -1,10 +1,10 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { parseProductForm } from '@/lib/admin/product-form'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import type { Size } from '@/lib/catalog/constants'
+import { revalidateCatalog } from '@/lib/catalog/revalidate'
 
 export type ProductFormState =
   | { status: 'idle' }
@@ -39,16 +39,15 @@ export async function saveProduct(_prev: ProductFormState, formData: FormData): 
     return { status: 'error', message: error.message, values }
   }
 
+  // One transaction: existing sizes move by (new - loaded) so concurrent sales aren't overwritten;
+  // removed sizes still held by open orders drop to 0 instead of being deleted.
   const sizes = Object.keys(p.stock) as Size[]
-  const { error: upsertError } = await supabase
-    .from('product_variants')
-    .upsert(sizes.map((size) => ({ product_id: saved.id, size, stock: p.stock[size]! })), { onConflict: 'product_id,size' })
-  if (upsertError) return { status: 'error', message: upsertError.message, values }
-  const { error: deleteError } = await supabase.from('product_variants').delete().eq('product_id', saved.id).not('size', 'in', `(${sizes.join(',')})`)
-  if (deleteError) return { status: 'error', message: deleteError.message, values }
+  const { error: stockError } = await supabase.rpc('save_product_stock', {
+    p_product_id: saved.id,
+    p_stock: sizes.map((size) => ({ size, stock: p.stock[size]!, orig: p.stockOrig[size] ?? null })),
+  })
+  if (stockError) return { status: 'error', message: stockError.message, values }
 
-  revalidatePath('/')
-  revalidatePath('/shop')
-  revalidatePath('/product/[slug]', 'page')
+  revalidateCatalog()
   redirect('/admin/products?saved=1')
 }

@@ -57,6 +57,8 @@ export type ProductInput = {
   isActive: boolean
   isFeatured: boolean
   stock: Partial<Record<Size, number>>
+  /** Stock per size when the form was loaded; the save applies (stock - orig) to the live value. */
+  stockOrig: Partial<Record<Size, number>>
 }
 
 export function parseProductForm(fd: FormData): { ok: true; data: ProductInput } | { ok: false; fieldErrors: Record<string, string> } {
@@ -101,6 +103,11 @@ export function parseProductForm(fd: FormData): { ok: true; data: ProductInput }
     if (!/^\d{1,5}$/.test(raw)) errors[`stock_${size}`] = 'Whole number, 0 or more.'
     else stock[size] = Number(raw)
   }
+  const stockOrig: Partial<Record<Size, number>> = {}
+  for (const size of SIZES) {
+    const raw = str(`stock_orig_${size}`)
+    if (/^\d{1,5}$/.test(raw)) stockOrig[size] = Number(raw)
+  }
   if (Object.keys(stock).length === 0 && !Object.keys(errors).some((k) => k.startsWith('stock_'))) errors.stock = 'Enter stock for at least one size (0 is fine).'
 
   if (Object.keys(errors).length > 0) return { ok: false, fieldErrors: errors }
@@ -108,7 +115,7 @@ export function parseProductForm(fd: FormData): { ok: true; data: ProductInput }
     ok: true,
     data: {
       name, slug, description, category: category!, priceCentavos: priceCentavos!, retailPriceCentavos,
-      images, isActive: fd.get('isActive') === 'on', isFeatured: fd.get('isFeatured') === 'on', stock,
+      images, isActive: fd.get('isActive') === 'on', isFeatured: fd.get('isFeatured') === 'on', stock, stockOrig,
     },
   }
 }
