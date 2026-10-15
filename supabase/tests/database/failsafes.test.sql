@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(48);
+select plan(51);
 
 -- Fixtures -------------------------------------------------------------------
 insert into products (id, slug, name, category, price_centavos) values
@@ -32,8 +32,11 @@ insert into order_items (order_id, variant_id, product_name, size, qty, price_ce
 -- 1. Paid after cancel ---------------------------------------------------------
 update orders set status = 'cancelled' where id = '00000000-0000-0000-0000-0000000001e1';
 select is(
-  (select outcome from record_checkout_payment('cs_fs_cancelled')),
-  'paid_after_cancel', 'a payment for a cancelled order is reported as paid_after_cancel');
+  (select outcome || ':' || new_conflict from record_checkout_payment('cs_fs_cancelled')),
+  'paid_after_cancel:true', 'a payment for a cancelled order is reported as paid_after_cancel, newly flagged');
+select is(
+  (select outcome || ':' || new_conflict from record_checkout_payment('cs_fs_cancelled')),
+  'paid_after_cancel:false', 'a repeat delivery is not newly flagged (owner alerted once)');
 select is((select status::text from orders where id = '00000000-0000-0000-0000-0000000001e1'), 'cancelled', 'the order stays cancelled');
 select ok((select payment_conflict from orders where id = '00000000-0000-0000-0000-0000000001e1'), 'the order is flagged payment_conflict');
 select isnt((select paid_at from orders where id = '00000000-0000-0000-0000-0000000001e1'), null, 'paid_at records when the money arrived');
@@ -72,6 +75,12 @@ select throws_ok(
 select throws_ok(
   $$update orders set paymongo_checkout_id = 'cs_other' where id = '00000000-0000-0000-0000-0000000001e4'$$,
   '23514', null, 'a checkout id cannot be swapped once attached');
+select lives_ok(
+  $$update orders set paymongo_livemode = false where id = '00000000-0000-0000-0000-0000000001e4'$$,
+  'the PayMongo mode can be recorded once');
+select throws_ok(
+  $$update orders set paymongo_livemode = true where id = '00000000-0000-0000-0000-0000000001e4'$$,
+  '23514', null, 'the PayMongo mode cannot change once recorded');
 select lives_ok(
   $$update orders set status = 'shipped' where id = '00000000-0000-0000-0000-0000000001e2'$$,
   'paid -> shipped is allowed');

@@ -8,10 +8,12 @@ alter table public.orders
   add column idempotency_key text unique
     check (idempotency_key is null or idempotency_key ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'),
   add column paymongo_checkout_url text
-    check (paymongo_checkout_url is null or char_length(paymongo_checkout_url) <= 2000);
+    check (paymongo_checkout_url is null or char_length(paymongo_checkout_url) <= 2000),
+  add column paymongo_livemode boolean;
 
 comment on column public.orders.payment_conflict is 'PayMongo reported a payment after the order was cancelled: refund it or fulfil it.';
 comment on column public.orders.amount_mismatch is 'The paid amount or currency did not match the order total.';
+comment on column public.orders.paymongo_livemode is 'Mode of the key that created the checkout session (true = live); null for older orders.';
 comment on column public.orders.confirmation_sent_at is 'When the customer confirmation email was sent (claimed before sending, cleared on failure).';
 
 -- Orders paid before this migration already got their email.
@@ -55,11 +57,12 @@ revoke execute on function public.apply_order_stock(uuid) from public, anon, aut
 --   already_paid       paid/shipped already (idempotent repeat)
 --   paid_after_cancel  money arrived for a cancelled order: flagged, status and stock untouched
 --   unknown            no order has this checkout id
+-- new_conflict is true only on the call that first flagged a paid-after-cancel (alert the owner once).
 create function public.record_checkout_payment(
   p_checkout_id text,
   p_paid_centavos integer default null,
   p_currency text default null
-) returns table (order_id uuid, outcome text, oversold boolean, amount_mismatch boolean)
+) returns table (order_id uuid, outcome text, oversold boolean, amount_mismatch boolean, new_conflict boolean)
 language plpgsql security definer set search_path = public as $$
 #variable_conflict use_column
 declare
@@ -68,13 +71,13 @@ declare
   v_oversold boolean;
 begin
   if p_checkout_id is null or char_length(p_checkout_id) not between 1 and 200 then
-    return query select null::uuid, 'unknown'::text, false, false;
+    return query select null::uuid, 'unknown'::text, false, false, false;
     return;
   end if;
 
   select * into v_order from orders o where o.paymongo_checkout_id = p_checkout_id for update;
   if not found then
-    return query select null::uuid, 'unknown'::text, false, false;
+    return query select null::uuid, 'unknown'::text, false, false, false;
     return;
   end if;
 
@@ -82,7 +85,7 @@ begin
              or coalesce(upper(p_currency) <> 'PHP', false);
 
   if v_order.status in ('paid', 'shipped') then
-    return query select v_order.id, 'already_paid'::text, v_order.oversold, v_order.amount_mismatch;
+    return query select v_order.id, 'already_paid'::text, v_order.oversold, v_order.amount_mismatch, false;
     return;
   end if;
 
@@ -90,7 +93,7 @@ begin
     update orders o
     set payment_conflict = true, paid_at = coalesce(o.paid_at, now()), amount_mismatch = o.amount_mismatch or v_mismatch
     where o.id = v_order.id;
-    return query select v_order.id, 'paid_after_cancel'::text, v_order.oversold, v_order.amount_mismatch or v_mismatch;
+    return query select v_order.id, 'paid_after_cancel'::text, v_order.oversold, v_order.amount_mismatch or v_mismatch, not v_order.payment_conflict;
     return;
   end if;
 
@@ -98,7 +101,7 @@ begin
   update orders o set status = 'paid', paid_at = now(), amount_mismatch = v_mismatch where o.id = v_order.id;
   perform set_config('app.order_payment', '', true);
   v_oversold := public.apply_order_stock(v_order.id);
-  return query select v_order.id, 'paid'::text, v_oversold, v_mismatch;
+  return query select v_order.id, 'paid'::text, v_oversold, v_mismatch, false;
 end;
 $$;
 revoke execute on function public.record_checkout_payment(text, integer, text) from public, anon, authenticated;
@@ -219,7 +222,7 @@ $$;
 revoke execute on function public.create_pending_order(jsonb) from public, anon, authenticated;
 grant execute on function public.create_pending_order(jsonb) to service_role;
 
--- Guard: amounts never change after checkout, the checkout id and idempotency key are write-once,
+-- Guard: amounts never change after checkout, the checkout id, PayMongo mode and idempotency key are write-once,
 -- and status only moves pending -> cancelled, paid -> shipped, or -> paid inside the payment functions.
 create function public.guard_order_update() returns trigger
 language plpgsql set search_path = public as $$
@@ -233,6 +236,9 @@ begin
   end if;
   if old.paymongo_checkout_id is not null and new.paymongo_checkout_id is distinct from old.paymongo_checkout_id then
     raise exception 'the PayMongo checkout id cannot change once attached' using errcode = '23514';
+  end if;
+  if old.paymongo_livemode is not null and new.paymongo_livemode is distinct from old.paymongo_livemode then
+    raise exception 'the PayMongo mode cannot change once recorded' using errcode = '23514';
   end if;
   if old.idempotency_key is not null and new.idempotency_key is distinct from old.idempotency_key then
     raise exception 'the idempotency key cannot change' using errcode = '23514';
