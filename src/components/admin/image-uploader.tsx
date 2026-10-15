@@ -44,27 +44,31 @@ export function ImageUploader({ initial }: { initial: string[] }) {
   return (
     <div className="space-y-3">
       <input type="hidden" name="images" value={JSON.stringify(images)} />
-      <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
         {images.map((src, i) => (
-          <li key={src} className="space-y-1">
-            <div className="relative aspect-square border border-ink bg-card">
-              <Image src={productImageUrl(src)} alt="" fill sizes="160px" className="object-cover" />
-              {i === 0 ? <span className="absolute left-1 top-1 bg-tag px-1 text-[10px] font-bold uppercase">Cover</span> : null}
+          <li key={src} className="border border-hairline bg-card p-1.5">
+            <div className="relative aspect-square bg-paper">
+              <Image src={productImageUrl(src)} alt={`Photo ${i + 1}`} fill sizes="200px" className="object-cover" />
+              {i === 0 ? <span className="absolute left-0 top-0 bg-ink px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.15em] text-paper">Cover</span> : null}
             </div>
-            <div className="flex justify-between text-xs">
-              {i > 0 ? <button type="button" className="underline" onClick={() => move(i)}>Make cover</button> : <span />}
-              <button type="button" className="underline" onClick={() => remove(i)}>Remove</button>
+            <div className="flex justify-between gap-2 pt-1.5 font-mono text-[11px] uppercase tracking-[0.1em]">
+              {i > 0 ? <button type="button" className="min-h-8 underline-offset-4 hover:underline" onClick={() => move(i)}>Make cover</button> : <span />}
+              <button type="button" className="min-h-8 font-bold text-tag-ink underline-offset-4 hover:underline" onClick={() => remove(i)}>Remove</button>
             </div>
           </li>
         ))}
+        {images.length < MAX_IMAGES ? (
+          <li>
+            <label className={`flex aspect-square h-full min-h-32 cursor-pointer flex-col items-center justify-center gap-2 border-2 border-dashed border-hairline bg-paper p-3 text-center transition-colors hover:border-ink focus-within:border-ink focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink ${busy ? 'cursor-wait opacity-60' : ''}`}>
+              <svg aria-hidden viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="square"><path d="M12 16V4M7 9l5-5 5 5M4 20h16" /></svg>
+              <span className="font-mono text-xs font-bold uppercase tracking-[0.15em]">{busy ? 'Uploading…' : 'Add photos'}</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">Up to {MAX_IMAGES} · resized on upload</span>
+              <input type="file" accept="image/*" multiple className="sr-only" disabled={busy} onChange={(e) => { void onFiles(e.target.files); e.target.value = '' }} />
+            </label>
+          </li>
+        ) : null}
       </ul>
-      {images.length < MAX_IMAGES ? (
-        <label className="inline-flex h-11 cursor-pointer items-center border border-ink bg-card px-4 text-sm font-semibold">
-          {busy ? 'Uploading…' : 'Add photos'}
-          <input type="file" accept="image/*" multiple className="sr-only" disabled={busy} onChange={(e) => { void onFiles(e.target.files); e.target.value = '' }} />
-        </label>
-      ) : null}
-      {error ? <p role="alert" className="text-sm font-semibold">{error}</p> : null}
+      {error ? <p role="alert" className="border-l-4 border-tag pl-2 text-sm font-semibold">{error}</p> : null}
     </div>
   )
 }

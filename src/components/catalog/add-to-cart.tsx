@@ -32,8 +32,12 @@ export function AddToCart({ product }: { product: Product }) {
   return (
     <div className="space-y-4">
       <SizePicker variants={product.variants} selected={variantId} onSelect={(id) => { setVariantId(id); setAdded(false) }} />
-      {note ? <p className="text-sm font-semibold">{note}</p> : null}
-      <div data-sticky-cta className="fixed inset-x-0 bottom-0 z-20 space-y-2 border-t border-ink bg-paper p-4 sm:static sm:border-0 sm:p-0">
+      {note ? (
+        <p className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-tag-ink">
+          <span aria-hidden className="h-2 w-2 bg-tag" />{note}
+        </p>
+      ) : null}
+      <div data-sticky-cta className="fixed inset-x-0 bottom-0 z-20 space-y-2 border-t border-hairline bg-paper p-4 sm:static sm:border-0 sm:p-0">
         {inStock.length === 0 ? (
           <button type="button" disabled className={`${buttonPrimary} w-full`}>Sold out</button>
         ) : (
@@ -43,7 +47,7 @@ export function AddToCart({ product }: { product: Product }) {
         )}
         {added ? (
           <p role="status" className="text-center text-sm">
-            Added to cart. <Link href="/cart" className="font-semibold underline">View cart</Link>
+            Added to cart. <Link href="/cart" className="font-semibold underline underline-offset-4">View cart</Link>
           </p>
         ) : null}
       </div>

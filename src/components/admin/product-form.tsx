@@ -1,12 +1,16 @@
 'use client'
 
+import Link from 'next/link'
 import { Fragment, useActionState, useState } from 'react'
 import { saveProduct, type ProductFormState } from '@/app/admin/(protected)/products/actions'
-import { buttonPrimary, inputBase } from '@/components/ui/styles'
+import { buttonInk, inputBase, inputCompact, monoLabel, textareaBase } from '@/components/ui/styles'
 import { centavosToPesoInput, MAX_DESCRIPTION_LENGTH } from '@/lib/admin/product-form'
 import { CATEGORIES, SIZES, sizeLabel } from '@/lib/catalog/constants'
 import type { Product } from '@/lib/catalog/types'
+import { panel, panelTitle } from './admin-ui'
 import { ImageUploader } from './image-uploader'
+
+const label = `block ${monoLabel}`
 
 function Err({ e, k }: { e: Record<string, string>; k: string }) {
   return e[k] ? <p className="border-l-4 border-tag pl-2 text-left text-sm font-semibold text-ink">{e[k]}</p> : null
@@ -29,54 +33,63 @@ export function ProductForm({ product }: { product: Product | null }) {
   const stockFor = (size: string) => product?.variants.find((v) => v.size === size)?.stock
 
   return (
-    <form action={action} className="max-w-2xl space-y-6">
+    <form action={action} className="max-w-5xl space-y-6">
       {product ? <input type="hidden" name="id" value={product.id} /> : null}
       {state.status === 'error' ? <p role="alert" className="border border-tag bg-card p-3 text-sm">{state.message}</p> : null}
 
-      <Fragment key={`fields-${round}`}>
-        <label className="block space-y-1"><span className="text-sm font-semibold">Name</span><input name="name" defaultValue={text('name', product?.name)} className={inputBase} required /><Err e={e} k="name" /></label>
-        <label className="block space-y-1"><span className="text-sm font-semibold">URL slug (optional)</span><input name="slug" defaultValue={text('slug', product?.slug)} placeholder="auto from name" className={inputBase} /><Err e={e} k="slug" /></label>
-        <label className="block space-y-1"><span className="text-sm font-semibold">Description</span><textarea name="description" maxLength={MAX_DESCRIPTION_LENGTH} defaultValue={text('description', product?.description)} rows={4} className={`${inputBase} h-auto py-2`} /><Err e={e} k="description" /></label>
-        <label className="block space-y-1">
-          <span className="text-sm font-semibold">Category</span>
-          <select name="category" defaultValue={text('category', product?.category)} className={inputBase}>
-            <option value="" disabled>Choose…</option>
-            {CATEGORIES.map((c) => <option key={c.slug} value={c.slug}>{c.label}</option>)}
-          </select>
-          <Err e={e} k="category" />
-        </label>
-        <div className="grid grid-cols-2 gap-4">
-          <label className="block space-y-1"><span className="text-sm font-semibold">Overrun price (₱)</span><input name="price" inputMode="decimal" defaultValue={text('price', centavosToPesoInput(product?.priceCentavos ?? null))} className={inputBase} /><Err e={e} k="price" /></label>
-          <label className="block space-y-1"><span className="text-sm font-semibold">Retail price (₱, optional)</span><input name="retailPrice" inputMode="decimal" defaultValue={text('retailPrice', centavosToPesoInput(product?.retailPriceCentavos ?? null))} className={inputBase} /><Err e={e} k="retailPrice" /></label>
-        </div>
-
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-semibold">Stock per size (leave blank if the size doesn&apos;t exist)</legend>
-          <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
-            {SIZES.map((s) => (
-              <label key={s} className="space-y-1 text-center text-xs font-semibold">
-                {sizeLabel(s)}
-                <input name={`stock_${s}`} inputMode="numeric" defaultValue={text(`stock_${s}`, stockFor(s)?.toString())} className={`${inputBase} text-center`} />
-                <Err e={e} k={`stock_${s}`} />
-              </label>
-            ))}
+      <section className={`${panel} space-y-5`}>
+        <h2 className={panelTitle}>General information</h2>
+        <Fragment key={`general-${round}`}>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="block space-y-1.5"><span className={label}>Name</span><input name="name" defaultValue={text('name', product?.name)} className={inputBase} required /><Err e={e} k="name" /></label>
+            <label className="block space-y-1.5"><span className={label}>URL slug (optional)</span><input name="slug" defaultValue={text('slug', product?.slug)} placeholder="auto from name" className={inputBase} /><Err e={e} k="slug" /></label>
           </div>
-          <Err e={e} k="stock" />
-        </fieldset>
-      </Fragment>
+          <div className="grid gap-5 sm:grid-cols-3">
+            <label className="block space-y-1.5">
+              <span className={label}>Category</span>
+              <select name="category" defaultValue={text('category', product?.category)} className={inputBase}>
+                <option value="" disabled>Choose…</option>
+                {CATEGORIES.map((c) => <option key={c.slug} value={c.slug}>{c.label}</option>)}
+              </select>
+              <Err e={e} k="category" />
+            </label>
+            <label className="block space-y-1.5"><span className={label}>Overrun price (₱)</span><input name="price" inputMode="decimal" defaultValue={text('price', centavosToPesoInput(product?.priceCentavos ?? null))} className={inputBase} /><Err e={e} k="price" /></label>
+            <label className="block space-y-1.5"><span className={label}>Retail price (₱, optional)</span><input name="retailPrice" inputMode="decimal" defaultValue={text('retailPrice', centavosToPesoInput(product?.retailPriceCentavos ?? null))} className={inputBase} /><Err e={e} k="retailPrice" /></label>
+          </div>
+          <label className="block space-y-1.5"><span className={label}>Description</span><textarea name="description" maxLength={MAX_DESCRIPTION_LENGTH} defaultValue={text('description', product?.description)} rows={5} className={textareaBase} /><Err e={e} k="description" /></label>
+        </Fragment>
+        <div key={`flags-${round}`} className="flex flex-wrap gap-x-8 gap-y-1">
+          <label className={`flex h-11 items-center gap-3 ${monoLabel}`}><input type="checkbox" name="isActive" defaultChecked={checked('isActive', product?.isActive ?? true)} className="h-5 w-5 accent-ink" /> Visible in store</label>
+          <label className={`flex h-11 items-center gap-3 ${monoLabel}`}><input type="checkbox" name="isFeatured" defaultChecked={checked('isFeatured', product?.isFeatured ?? false)} className="h-5 w-5 accent-ink" /> Featured on home</label>
+        </div>
+      </section>
 
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-semibold">Photos (first is the cover)</legend>
+      <fieldset className={`${panel} space-y-5`}>
+        <legend className="sr-only">Photos (first is the cover)</legend>
+        <div aria-hidden className={`${panelTitle} flex items-baseline justify-between gap-4`}>Photos <span className="font-mono text-[11px] font-normal uppercase tracking-[0.15em] text-muted">First is the cover</span></div>
         <ImageUploader initial={product?.images ?? []} />
         <Err e={e} k="images" />
       </fieldset>
 
-      <div key={`flags-${round}`} className="flex gap-6">
-        <label className="flex h-11 items-center gap-2"><input type="checkbox" name="isActive" defaultChecked={checked('isActive', product?.isActive ?? true)} className="h-5 w-5" /> Visible in store</label>
-        <label className="flex h-11 items-center gap-2"><input type="checkbox" name="isFeatured" defaultChecked={checked('isFeatured', product?.isFeatured ?? false)} className="h-5 w-5" /> Featured on home</label>
-      </div>
+      <fieldset key={`stock-${round}`} className={`${panel} space-y-5`}>
+        <legend className="sr-only">Stock per size (leave blank if the size doesn&apos;t exist)</legend>
+        <div aria-hidden className={`${panelTitle} flex flex-wrap items-baseline justify-between gap-x-4`}>Stock per size <span className="font-mono text-[11px] font-normal uppercase tracking-[0.15em] text-muted">Leave blank if the size doesn&apos;t exist</span></div>
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+          {SIZES.map((s) => (
+            <label key={s} className="block space-y-2 border border-hairline bg-paper p-2 text-center font-mono text-[11px] font-bold uppercase tracking-[0.1em]">
+              {sizeLabel(s)}
+              <input name={`stock_${s}`} inputMode="numeric" defaultValue={text(`stock_${s}`, stockFor(s)?.toString())} className={inputCompact} />
+              <Err e={e} k={`stock_${s}`} />
+            </label>
+          ))}
+        </div>
+        <Err e={e} k="stock" />
+      </fieldset>
 
-      <button type="submit" disabled={pending} className={buttonPrimary}>{pending ? 'Saving…' : 'Save product'}</button>
+      <div className="flex items-center justify-end gap-4 border-t border-hairline pt-6">
+        <Link href="/admin/products" className="inline-flex h-12 items-center px-3 font-mono text-sm font-bold uppercase tracking-[0.15em] underline-offset-4 hover:underline">Cancel</Link>
+        <button type="submit" disabled={pending} className={buttonInk}>{pending ? 'Saving…' : 'Save product'}</button>
+      </div>
     </form>
   )
 }
