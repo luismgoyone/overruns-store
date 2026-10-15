@@ -22,11 +22,18 @@ export type StartCheckoutResult =
   | { kind: 'error'; message: string }
 
 export async function startCheckoutCore(form: CheckoutForm, cart: CartPayloadLine[], deps: StartCheckoutDeps): Promise<StartCheckoutResult> {
-  const variants = await deps.loadVariants([...new Set(cart.map((l) => l.variantId))])
-  const priced = priceCart(cart, variants, deps.shippingFeeCentavos)
-  if (!priced.ok) return { kind: 'cart_problems', problems: priced.problems }
-
-  const orderId = await deps.createPendingOrder({ customer: form, lines: priced.lines, subtotal: priced.subtotal, shipping: priced.shipping, total: priced.total })
+  let orderId: string
+  let priced: Extract<ReturnType<typeof priceCart>, { ok: true }>
+  try {
+    const variants = await deps.loadVariants([...new Set(cart.map((l) => l.variantId))])
+    const result = priceCart(cart, variants, deps.shippingFeeCentavos)
+    if (!result.ok) return { kind: 'cart_problems', problems: result.problems }
+    priced = result
+    orderId = await deps.createPendingOrder({ customer: form, lines: priced.lines, subtotal: priced.subtotal, shipping: priced.shipping, total: priced.total })
+  } catch (err) {
+    console.error('[checkout] could not prepare order', err)
+    return { kind: 'error', message: 'Something went wrong preparing your order. Please try again.' }
+  }
   try {
     const session = await deps.createSession({
       orderId,

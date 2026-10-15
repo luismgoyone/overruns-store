@@ -6,7 +6,7 @@ const text = (label: string) => z.string().trim().min(2, `Enter your ${label}`).
 
 export const addressSchema = z.object({
   street: text('street address'),
-  barangay: text('barangay'),
+  barangay: z.string().trim().min(1, 'Enter your barangay').max(200),
   city: text('city or municipality'),
   province: text('province'),
   zip: z.string().trim().regex(/^\d{4}$/, 'Philippine ZIP codes have 4 digits'),
@@ -17,7 +17,7 @@ export const checkoutFormSchema = addressSchema.extend({
   name: z.string().trim().min(2, 'Enter your full name').max(100),
   phone: z
     .string()
-    .transform((s) => s.replace(/[\s-]/g, ''))
+    .transform((s) => s.replace(/[\s\-().]/g, ''))
     .pipe(z.string().regex(PH_MOBILE, 'Enter a PH mobile number like 0917 123 4567'))
     .transform((s) => `+63${s.match(PH_MOBILE)![1]}`),
   email: z.string().trim().pipe(z.email('Enter a valid email address')),

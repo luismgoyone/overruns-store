@@ -28,7 +28,10 @@ export async function startCheckout(_prev: CheckoutActionState, formData: FormDa
   if (!cart.success) return { status: 'error', message: 'Your cart is empty or out of date. Please go back to your cart.', values }
 
   const secretKey = process.env.PAYMONGO_SECRET_KEY
-  if (!secretKey) return { status: 'error', message: 'Payments are not configured yet (PAYMONGO_SECRET_KEY is missing).', values }
+  if (!secretKey) {
+    console.error('[checkout] PAYMONGO_SECRET_KEY is not set')
+    return { status: 'error', message: "Online payment isn't available right now. Please try again later.", values }
+  }
 
   const result = await startCheckoutCore(form.data, cart.data, buildCheckoutDeps(secretKey))
   if (result.kind === 'redirect') redirect(result.url)

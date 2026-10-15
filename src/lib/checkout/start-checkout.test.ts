@@ -38,6 +38,12 @@ describe('startCheckoutCore', () => {
     expect(r.kind).toBe('cart_problems')
     expect(d.createPendingOrder).not.toHaveBeenCalled()
   })
+  it('reports a friendly error if the database fails before an order exists', async () => {
+    const d = deps({ createPendingOrder: vi.fn().mockRejectedValue(new Error('db down')) })
+    const r = await startCheckoutCore(form, cart, d)
+    expect(r).toEqual({ kind: 'error', message: expect.stringContaining('preparing your order') })
+    expect(d.createSession).not.toHaveBeenCalled()
+  })
   it('cancels the order and reports an error if PayMongo fails', async () => {
     const d = deps({ createSession: vi.fn().mockRejectedValue(new Error('down')) })
     const r = await startCheckoutCore(form, cart, d)

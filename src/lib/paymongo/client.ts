@@ -34,6 +34,7 @@ export async function createCheckoutSession(
 
   const res = await fetchImpl(`${API_BASE}/checkout_sessions`, {
     method: 'POST',
+    signal: AbortSignal.timeout(15_000),
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',

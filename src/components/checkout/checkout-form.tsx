@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { startCheckout, type CheckoutActionState } from '@/app/(shop)/checkout/actions'
 import { useCart } from '@/components/cart/cart-provider'
 import { buttonPrimary, buttonSecondary, inputBase } from '@/components/ui/styles'
@@ -25,6 +25,8 @@ const fields = [
 export function CheckoutForm() {
   const { lines, subtotal, hydrated, dispatch } = useCart()
   const [state, formAction, pending] = useActionState<CheckoutActionState, FormData>(startCheckout, { status: 'idle' })
+  // Hide the problems banner once the shopper has applied its fixes, until the next submit.
+  const [fixedState, setFixedState] = useState<CheckoutActionState | null>(null)
   if (!hydrated) return <p className="text-muted">Loading…</p>
   if (lines.length === 0) return <p>Your cart is empty. <Link href="/shop" className="underline">Go shopping</Link></p>
 
@@ -36,11 +38,11 @@ export function CheckoutForm() {
     <form action={formAction} className="space-y-6" noValidate>
       <input type="hidden" name="cart" value={cartJson} />
 
-      {state.status === 'cart_problems' ? (
+      {state.status === 'cart_problems' && state !== fixedState ? (
         <div role="alert" className="space-y-3 border border-ink bg-card p-4">
           <p className="font-semibold">Some items changed since you added them:</p>
           <ul className="list-disc pl-5 text-sm">{state.problems.map((p) => <li key={p.variantId}>{problemMessage(p)}</li>)}</ul>
-          <button type="button" className={buttonSecondary} onClick={() => dispatch({ type: 'applyProblems', problems: state.problems })}>Update my cart</button>
+          <button type="button" className={buttonSecondary} onClick={() => { dispatch({ type: 'applyProblems', problems: state.problems }); setFixedState(state) }}>Update my cart</button>
         </div>
       ) : null}
       {state.status === 'error' ? <p role="alert" className="border border-tag bg-card p-3 text-sm">{state.message}</p> : null}

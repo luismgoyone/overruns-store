@@ -37,7 +37,8 @@ export function buildCheckoutDeps(secretKey: string): StartCheckoutDeps {
       if (error) throw error
     },
     async cancelOrder(orderId) {
-      await db.from('orders').update({ status: 'cancelled' }).eq('id', orderId).eq('status', 'pending')
+      const { error } = await db.from('orders').update({ status: 'cancelled' }).eq('id', orderId).eq('status', 'pending')
+      if (error) console.error('[checkout] could not cancel pending order', { orderId, error })
     },
     createSession: (input) => createCheckoutSession(input, { secretKey }),
     shippingFeeCentavos: SHIPPING_FEE_CENTAVOS,

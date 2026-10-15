@@ -7,6 +7,7 @@ describe('checkoutFormSchema', () => {
   it('normalizes PH mobile numbers to +63 format', () => {
     expect(checkoutFormSchema.parse(valid).phone).toBe('+639171234567')
     expect(checkoutFormSchema.parse({ ...valid, phone: '+63 917-123-4567' }).phone).toBe('+639171234567')
+    expect(checkoutFormSchema.parse({ ...valid, phone: '(0917) 123.4567' }).phone).toBe('+639171234567')
   })
   it('rejects bad phone, email and ZIP with readable messages', () => {
     const r = checkoutFormSchema.safeParse({ ...valid, phone: '12345', email: 'nope', zip: '12' })
