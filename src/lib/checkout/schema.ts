@@ -29,3 +29,8 @@ export const cartPayloadSchema = z
   .min(1)
   .max(50)
 export type CartPayloadLine = z.infer<typeof cartPayloadSchema>[number]
+
+// One per checkout form instance, so a double submit reuses the same order and PayMongo session.
+export const idempotencyKeySchema = z
+  .union([z.literal(''), z.null(), z.uuid()])
+  .transform((s) => s || null)

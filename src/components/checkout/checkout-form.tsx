@@ -7,6 +7,7 @@ import { useCart } from '@/components/cart/cart-provider'
 import { buttonPrimary, buttonSecondary, inputOnCanvas, monoLabel } from '@/components/ui/styles'
 import { computeTotals } from '@/lib/cart/totals'
 import { sizeLabel } from '@/lib/catalog/constants'
+import { setCheckoutMarker } from '@/lib/checkout/marker'
 import { problemMessage } from '@/lib/checkout/problems'
 import { SHIPPING_FEE_CENTAVOS } from '@/lib/config'
 import { formatPeso } from '@/lib/money'
@@ -22,11 +23,28 @@ const fields = [
   { name: 'zip', label: 'ZIP code', autoComplete: 'postal-code', type: 'text', inputMode: 'numeric' as const },
 ] as const
 
+// crypto.randomUUID only exists in secure contexts; getRandomValues works everywhere.
+function newIdempotencyKey(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  const b = crypto.getRandomValues(new Uint8Array(16))
+  b[6] = (b[6] & 0x0f) | 0x40
+  b[8] = (b[8] & 0x3f) | 0x80
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+}
+
 export function CheckoutForm() {
   const { lines, subtotal, hydrated, dispatch } = useCart()
   const [state, formAction, pending] = useActionState<CheckoutActionState, FormData>(startCheckout, { status: 'idle' })
   // Hide the problems banner once the shopper has applied its fixes, until the next submit.
   const [fixedState, setFixedState] = useState<CheckoutActionState | null>(null)
+  // One key per attempt: double clicks reuse the same order and PayMongo session; a finished attempt gets a new key.
+  const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey)
+  const [keyState, setKeyState] = useState(state)
+  if (state !== keyState) {
+    setKeyState(state)
+    setIdempotencyKey(newIdempotencyKey())
+  }
   if (!hydrated) return <p className="text-muted">Loading…</p>
   if (lines.length === 0) return <p className="border border-hairline bg-card p-6">Your cart is empty. <Link href="/shop" className="font-semibold underline underline-offset-4">Go shopping</Link></p>
 
@@ -56,8 +74,9 @@ export function CheckoutForm() {
   }
 
   return (
-    <form action={formAction} className="grid gap-8 lg:grid-cols-[1fr_400px] lg:items-start lg:gap-12" noValidate>
+    <form action={formAction} onSubmit={() => setCheckoutMarker(idempotencyKey)} className="grid gap-8 lg:grid-cols-[1fr_400px] lg:items-start lg:gap-12" noValidate>
       <input type="hidden" name="cart" value={cartJson} />
+      <input type="hidden" name="idempotency_key" value={idempotencyKey} />
 
       <div className="space-y-10">
         {state.status === 'cart_problems' && state !== fixedState ? (

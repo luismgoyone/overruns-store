@@ -61,8 +61,8 @@ Sign-ups are disabled, so the owner account is created by hand:
 | Command | What it runs |
 |---|---|
 | `npm test` | Unit and component tests (Vitest) |
-| `npm run test:db` | pgTAP tests for RLS and `mark_order_paid` (needs local Supabase) |
-| `npm run test:integration` | Catalog queries against the seeded local database |
+| `npm run test:db` | pgTAP tests for RLS, payments, stock saves and the order guard (needs local Supabase) |
+| `npm run test:integration` | Catalog queries and payment RPCs against the seeded local database |
 | `npm run lint` / `npm run typecheck` / `npm run build` | Static checks and production build |
 
 After changing the schema, run `npm run db:types` to regenerate `src/lib/supabase/database.types.ts`.
@@ -78,6 +78,37 @@ npx tsx scripts/simulate-paymongo-webhook.ts cs_xxx http://localhost:3000
 ```
 
 The first call marks the order paid and lowers stock; repeating it is a no-op.
+
+## Failsafes
+
+What the store does when payments or people don't behave:
+
+| Situation | What happens |
+|---|---|
+| Customer pays an order that was already cancelled | Cancelling (admin button, failed checkout, daily cron) first **expires the PayMongo session**, so this should not happen. If PayMongo already took the money, the cancel is refused and the order is marked paid instead. If a payment still lands on a cancelled order, the order stays cancelled, stock is untouched, and it is flagged **PAID AFTER CANCEL** in the admin with a *Fulfil instead* button; refund it in PayMongo or fulfil it. |
+| The webhook never arrives | The order page asks PayMongo directly for pending orders older than 30 seconds, and admins have a **Re-check payment** button. Same database path as the webhook, so an order is never paid twice. |
+| Double click on *Pay* | Each checkout attempt has an idempotency key; a repeat goes to the same PayMongo page instead of creating a second order. |
+| Owner saves a product while it sells | Stock is saved as a change from the value the form loaded (`+2`, `-1`), not an absolute number, so sales made in between aren't overwritten. |
+| Owner removes a size with open orders | The size is kept at 0 stock until those orders are done, so paying them still updates stock. An order item without a variant is flagged oversold. |
+| Paid more than the stock | Order flagged **Oversold**; the customer sees and gets an email saying we're double-checking stock and will contact them within 24h; the owner gets an email (`OWNER_NOTIFY_EMAIL`). |
+| Paid amount or currency differs from the order | Order marked paid but flagged **Amount mismatch** (admin + owner email). Events from the other PayMongo mode (test vs live) are ignored. |
+| Confirmation email fails | Sent at most once per order (`confirmation_sent_at`), retried by later webhook deliveries and reconciliation, and admins can **Resend confirmation**. A missing `RESEND_API_KEY` in production is logged as an error. |
+| Abandoned checkouts | A daily Vercel cron (`/api/cron/expire-pending`, 02:00 Manila) reconciles, then expires and cancels pending orders older than 24 hours. The admin list hides them unless *Show stale pending* is on. |
+| Unknown or bad webhook | Signature is checked before parsing; bodies over 256 KB get 413; unknown checkout ids are logged as errors. |
+| Database waking up / server error | Friendly *something went wrong, try again* pages instead of a blank error. |
+
+The database enforces the rest: order amounts can't change after checkout, statuses only move pending → paid (payment functions only) / cancelled, paid → shipped, and orders are created with their items in one transaction.
+
+New environment variables:
+
+- `OWNER_NOTIFY_EMAIL` (optional): where alerts for oversold, amount-mismatch and paid-after-cancel orders go. Unset = no owner emails.
+- `CRON_SECRET`: any long random string (`openssl rand -hex 32`). Vercel sends it to the cron route; without it the cron refuses to run.
+
+**Upgrading an existing deployment:** these failsafes add the migration `supabase/migrations/20261016000000_failsafes.sql`. Run `npx supabase db push` **before** deploying this code. The new code calls functions and columns that only exist after the migration (`create_pending_order`, `record_checkout_payment`, `idempotency_key`, …), so deploying first would break checkout and the webhook until the push. The old code keeps working against the new schema, so pushing first is safe.
+
+**PayMongo "pass fees to customer":** leave it off. With it on, PayMongo adds its fee to what the customer pays, so `payments[].amount` is larger than the order total and every order gets flagged **Amount mismatch** (orders are still marked paid).
+
+**Switching from test to live keys:** each order remembers which key mode created its PayMongo session. After a switch, pending orders from the other mode can't be checked or paid with the new key, so reconciliation skips them and cancelling them skips PayMongo.
 
 ## Deploy (Vercel Hobby + Supabase Free)
 
@@ -96,7 +127,8 @@ The first call marks the order paid and lowers stock; repeating it is a no-op.
    ```
    Put the returned `secret_key` (`whsk_…`) in Vercel as `PAYMONGO_WEBHOOK_SECRET` and redeploy.
 4. **Custom domain:** `npx vercel domains add shop.<domain> <project>`, then add the DNS record Vercel asks for (an `A` record to `76.76.21.21`; on Cloudflare set it to DNS only, grey cloud). Set `NEXT_PUBLIC_SITE_URL` to the new domain and redeploy so payment return links and email links use it.
-5. **Resend:** add `RESEND_API_KEY`. Without a verified domain, Resend only delivers mail from `onboarding@resend.dev` to the Resend account owner's own address.
+5. **Cron and alerts:** add `CRON_SECRET` (Production) and, optionally, `OWNER_NOTIFY_EMAIL`. The daily cron is declared in `vercel.json`.
+6. **Resend:** add `RESEND_API_KEY`. Without a verified domain, Resend only delivers mail from `onboarding@resend.dev` to the Resend account owner's own address.
 
 ## Before each client demo
 

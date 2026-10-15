@@ -19,6 +19,13 @@ const input = (name: string) => document.querySelector<HTMLInputElement>(`[name=
 beforeEach(() => saveProduct.mockReset())
 
 describe('ProductForm', () => {
+  it('remembers the loaded stock so a save only applies the change (no lost sales)', () => {
+    render(<ProductForm product={product} />)
+    expect(input('stock_orig_M').value).toBe('5')
+    expect(input('stock_orig_M').type).toBe('hidden')
+    expect(document.querySelector('[name="stock_orig_L"]')).toBeNull()
+  })
+
   it('keeps the submitted values after a rejected save', async () => {
     saveProduct.mockResolvedValue({
       status: 'invalid',

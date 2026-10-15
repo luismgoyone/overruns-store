@@ -13,6 +13,11 @@ export const INSTAGRAM_HANDLE = 'theoverrunsproject'
 export const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_HANDLE}/`
 
 export function siteUrl(): string {
+  // Previews must send PayMongo redirects and email links back to the preview, not production.
+  if (process.env.VERCEL_ENV === 'preview') {
+    const host = process.env.VERCEL_BRANCH_URL || process.env.VERCEL_URL
+    if (host) return `https://${host}`
+  }
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
   return 'http://localhost:3000'

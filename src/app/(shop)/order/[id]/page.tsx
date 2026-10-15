@@ -1,13 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { after } from 'next/server'
 import { ClearCartOnMount } from '@/components/cart/clear-cart-on-mount'
-import { PendingRefresher } from '@/components/order/pending-refresher'
+import { OrderStatusMessage } from '@/components/order/order-status-message'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { buttonInk } from '@/components/ui/styles'
 import { sizeLabel } from '@/lib/catalog/constants'
 import { formatPeso } from '@/lib/money'
 import { formatOrderNumber } from '@/lib/orders/format'
+import { cartClearMode, shouldReconcile, takeReconcileSlot } from '@/lib/orders/order-page'
+import { paymongoSecretKey, reconcileOrder } from '@/lib/orders/payment-ops-server'
 import { getOrderDetail } from '@/lib/orders/queries'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -15,16 +18,24 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Your order', robots: { index: false } }
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
-  const order = await getOrderDetail(createAdminClient(), (await params).id)
+  const id = (await params).id
+  let order = await getOrderDetail(createAdminClient(), id)
   if (!order) notFound()
+  // The webhook may never arrive: after ~30s, ask PayMongo directly (once per request; the
+  // PendingRefresher re-requests every few seconds for a minute). Emails go out after the response.
+  if (shouldReconcile(order, { hasKey: paymongoSecretKey() !== null }) && takeReconcileSlot(order.id)) {
+    const result = await reconcileOrder(order.id, { defer: (fn) => after(fn), getTimeoutMs: 3_000 })
+    if (result === 'paid') order = (await getOrderDetail(createAdminClient(), id)) ?? order
+  }
   const a = order.address
   const paidOrLater = order.status === 'paid' || order.status === 'shipped'
+  const clearCart = cartClearMode(order.status)
 
   return (
     <div className="px-4 pt-8 sm:px-8 sm:pt-12">
       <div className="mx-auto max-w-2xl space-y-8 border border-hairline bg-card p-5 sm:p-12">
-        {/* PayMongo only redirects here after payment; a cancelled order shouldn't wipe the cart. */}
-        {order.status !== 'cancelled' ? <ClearCartOnMount /> : null}
+        {/* A pending order only clears the cart when this tab just came back from its PayMongo checkout. */}
+        {clearCart === 'always' ? <ClearCartOnMount /> : clearCart === 'if-marker' ? <ClearCartOnMount ifMarker={order.idempotencyKey} /> : null}
         <div className="space-y-4 text-center">
           {paidOrLater ? (
             <div aria-hidden className="mx-auto flex h-16 w-16 items-center justify-center bg-ink text-paper">
@@ -35,16 +46,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             <span className="border border-hairline bg-paper px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.15em]">Order <strong>{formatOrderNumber(order.id)}</strong></span>
             <StatusBadge status={order.status} />
           </p>
-          {paidOrLater ? (
-            <h1 className="font-display text-2xl sm:text-3xl">Salamat! Your order is confirmed</h1>
-          ) : order.status === 'cancelled' ? (
-            <h1 className="font-display text-2xl sm:text-3xl">This order was cancelled</h1>
-          ) : (
-            <div className="space-y-2">
-              <h1 className="font-display text-2xl sm:text-3xl">Almost there</h1>
-              <PendingRefresher />
-            </div>
-          )}
+          <OrderStatusMessage status={order.status} oversold={order.oversold} paymentConflict={order.paymentConflict} />
         </div>
 
         <section aria-labelledby="order-items" className="space-y-3 border-t border-hairline pt-6">
