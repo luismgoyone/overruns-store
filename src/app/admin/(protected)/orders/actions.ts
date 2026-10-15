@@ -4,12 +4,14 @@ import { revalidatePath } from 'next/cache'
 import { canTransition, ORDER_STATUSES } from '@/lib/admin/order-status'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import type { OrderStatus } from '@/lib/catalog/constants'
+import { isUuid } from '@/lib/orders/queries'
 
 const isStatus = (s: string): s is OrderStatus => (ORDER_STATUSES as readonly string[]).includes(s)
 
 export async function updateOrderStatus(formData: FormData) {
   const { supabase } = await requireAdmin()
   const id = String(formData.get('id') ?? '')
+  if (!isUuid(id)) throw new Error('Invalid order id.')
   const from = String(formData.get('from') ?? '')
   const to = String(formData.get('to') ?? '')
   if (!isStatus(from) || !isStatus(to) || !canTransition(from, to)) throw new Error(`Can't move an order from ${from} to ${to}.`)

@@ -19,17 +19,17 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       <h1 className="font-display text-2xl">Orders</h1>
       <nav className="flex flex-wrap gap-2 text-sm">
         {[null, ...ORDER_STATUSES].map((s) => (
-          <Link key={s ?? 'all'} href={s ? `/admin/orders?status=${s}` : '/admin/orders'} className={`flex h-11 items-center border border-ink px-3 uppercase ${filter === s ? 'bg-ink text-paper' : 'bg-card'}`}>{s ?? 'All'}</Link>
+          <Link key={s ?? 'all'} href={s ? `/admin/orders?status=${s}` : '/admin/orders'} className={`flex h-11 items-center border border-ink px-3 uppercase ${filter === s ? 'bg-ink text-paper' : 'bg-card'}`} aria-current={filter === s ? 'page' : undefined}>{s ?? 'All'}</Link>
         ))}
       </nav>
-      {orders.length === 0 ? <p className="text-muted">No orders yet.</p> : (
+      {orders.length === 0 ? <p className="text-muted">{filter ? `No ${filter} orders.` : 'No orders yet.'}</p> : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] border border-ink bg-card text-sm">
             <thead className="border-b border-ink text-left"><tr><th className="p-2">Order #</th><th className="p-2">Customer</th><th className="p-2">Total</th><th className="p-2">Status</th><th className="p-2">Date</th></tr></thead>
             <tbody>
               {orders.map((o) => (
                 <tr key={o.id} className="border-b border-ink/20">
-                  <td className="p-2"><Link href={`/admin/orders/${o.id}`} className="font-mono font-semibold underline">{formatOrderNumber(o.id)}</Link></td>
+                  <td className="p-2"><Link href={`/admin/orders/${o.id}`} className="inline-flex h-11 items-center font-mono font-semibold underline">{formatOrderNumber(o.id)}</Link></td>
                   <td className="p-2">{o.customer_name}</td>
                   <td className="p-2">{formatPeso(o.total_centavos)}</td>
                   <td className="p-2"><StatusBadge status={o.status} />{o.oversold ? <span className="ml-2 border border-tag px-1 text-xs font-bold uppercase">Oversold</span> : null}</td>
